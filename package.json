@@ -42,4 +42,17 @@
     "junit-report-builder": "1.3.2"
   },
   "snyk": true
+  "renovate": {
+    "extends": [
+      "config:base"
+    ],
+    "schedule": "at 07:00 pm on Monday",
+    "timezone": "Europe/Zurich",
+    "packageRules": [
+      {
+        "packagePatterns": [".*"],
+        "groupName": "any"
+      }
+    ]
+  }
 }
