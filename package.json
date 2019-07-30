@@ -1,7 +1,7 @@
 {
-  "name": "@adobe/new-package-template",
+  "name": "@adobe/helix-log",
   "version": "0.0.1",
-  "description": "Example Package",
+  "description": "Logging for Helix",
   "main": "src/index.js",
   "scripts": {
     "test": " nyc --reporter=text --reporter=lcov --check-coverage --branches 100 --statements 100 --lines 100 mocha",
@@ -13,14 +13,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/adobe-rnd/new-nodejs-repository-template"
+    "url": "https://github.com/adobe/helix-loge"
   },
   "author": "",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/adobe-rnd/new-nodejs-repository-template/issues"
+    "url": "https://github.com/adobe/helix-loge/issues"
   },
-  "homepage": "https://github.com/adobe-rnd/new-nodejs-repository-template#readme",
+  "homepage": "https://github.com/adobe/helix-loge#readme",
   "dependencies": {
     "ferrum": "^1.2.0",
     "phin": "^3.4.0"
