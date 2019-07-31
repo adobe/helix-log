@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/adobe/helix-log#readme",
   "dependencies": {
+    "colorette": "^1.1.0",
     "ferrum": "^1.2.0",
     "phin": "^3.4.0",
     "snyk": "^1.207.2"

@@ -12,14 +12,16 @@
 
 /* eslint-disable no-console, no-param-reassign, no-use-before-define, consistent-return */
 
+const { assign } = Object;
 const assert = require('assert');
+const { abs, floor } = Math;
 const { createWriteStream } = require('fs');
 const { inspect } = require('util');
-const {
-  dict, exec, isdef, each,
-} = require('ferrum');
+const { black, bgMagenta, bgRed, bgYellow, bgBlackBright, bgBlueBright } = require('colorette');
+const { dict, exec, isdef, each, join, empty, type, last, TraitNotImplemented, list, take, size } = require('ferrum');
+const { jsonifyForLog } = require('./serialize-json');
 
-// eslint-disable-next-line no-underscore-dangle
+// This is the superset of log levels supported by console, bunyan and winston
 const _loglevelMap = {
   fatal: 0,
   error: 1,
@@ -27,6 +29,8 @@ const _loglevelMap = {
   info: 3,
   verbose: 4,
   debug: 5,
+  trace: 6,
+  silly: 7
 };
 
 /**
@@ -114,30 +118,167 @@ const tryInspect = (what, opts) => {
 const serializeMessage = (msg, opts) => msg.map(v => (typeof (v) === 'string' ? v : tryInspect(v, opts))).join(' ');
 
 /**
- * Can be used to encode a message as json.
+ * Simple message format: Serializes the message and prefixes it with
+ * the log level.
  *
- * Uses serializeMessage internally.
- *
- * ```
- * jsonEncodeMessage(["Hello World", 42], { level: 'debug' })
- * // => {message: 'Hello World 42', level: 'debug'}
- * ```
+ * This is used by the MemLogger by default for instance, because it is relatively
+ * easy to test with and contains no extra info.
  *
  * @param {any[]} msg – Parameters as you would pass them to console.log
- * @param {Object} opts – Named parameters:
+ * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
  *
- *   - level: The log level; defaults to 'info'
- *
- *   Any other parameters are forwarded to serializeMessage.
- * @returns {string} Json encoded string
+ *   - level: one of the log levels; this parameter is required.
  */
-const jsonEncodeMessage = (msg, opts = {}) => {
-  const { level = 'info', ...serializeOpts } = opts;
-  return JSON.stringify({ level, message: serializeMessage(msg, serializeOpts) });
+const messageFormatSimple = (msg, opts) => {
+  const { level = 'info', ...serialzeOpts } = opts || {};
+  return `[${level.toUpperCase()}] ${serializeMessage(msg, fmtOpts)}`
 };
 
 /**
- * The logger interface can be used to customize how logging is done.
+ * Message format that includes extra information; prefixes each messagej
+ *
+ * This is used by FileLogger and StreamLogger by default for instance because if you
+ * work with many log files you need that sort of info.
+ *
+ * @param {any[]} msg – Parameters as you would pass them to console.log
+ * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
+ *
+ *   - level: one of the log levels; this parameter is required.
+ */
+const messageFormatTechinal = (msg, opts) => {
+  const { level = 'info', ...serialzeOpts } = opts || {};
+  const twoDigit = (v) => `${v < 10 ? '0' : ''}${v}`;
+  const tz = d.getTimezoneOffset();
+  const now = new Date();
+  const pref = [ // [LEVEL YYYY-MM-DD hh:mm:ss.millis +tzh:tzm]
+    level.toUpperCase(),
+    `${d.getFullYear()}-${twoDigit(d.getMonth())}-${twoDigit(d.getDay())}`,
+    `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}.${d.getMilliseconds()}`,
+    `${tz > 0 ? '+' : '-'}${twoDigit(abs(floor(tz / 60)))}:${twoDigit(abs(tz % 60))}`
+  ];
+  return `[${join(pref, ' ')}] ${serializeMessage(msg, fmtOpts)}`
+};
+
+/**
+ * Message format with coloring/formatting escape codes
+ *
+ * Designed for use in terminals.
+ *
+ * @param {any[]} msg – Parameters as you would pass them to console.log
+ * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
+ *
+ *   - level: one of the log levels; this parameter is required.
+ */
+const messageFormatConsole = (msg, opts) => {
+  const { level = 'info', ...serialzeOpts } = opts || {};
+
+  const ser = serializeMessage(msg, { colors: true, ...this.fmtOpts });
+  const pref = `[${level.toUpperCase()}]`;
+
+  if (level === 'info') {
+    return ser;
+  } else if (level === 'fatal') {
+    return bgRed(black(`${pref} ${ser}`));
+  }
+
+  const cols = {
+    error: bgRed,
+    warn: bgYellow,
+    verbose: bgBlueBright,
+  };
+  const bgColor = cols[level];
+  if (bgColor) {
+    return `${bgColor(black(pref))} ${ser}`;
+  }
+
+  return `${bgBlackBright(pref)} ${ser}`;
+
+};
+
+/**
+ * Message format that produces json.
+ *
+ * Designed for structured logging; e.g. Loggly.
+ *
+ * This produces an object that can be converted to JSON. It does not
+ * produce a string, but you can easily write an adapter like so:
+ *
+ * ```
+ * const messageFormatJsonString = (...args) =>
+ *    JSON.stringify(messageFormatJson(...args));
+ * ```
+ *
+ * If the last element in the message can be converted to json-like using
+ * jsonifyForLog, then all the resulting fields will be included in the json-like
+ * object generated.
+ *
+ * The generated json must *not* contain the fields message, timestamp and
+ * level as these are reserved and used by the formatter.
+ *
+ * If that element is the sole element, no message field will be included;
+ * in this case you may explicitly set a message fiel in the last object.
+ *
+ * If the last object is an exception, it will be sent as { exception: $exception };
+ * this serves to facilitate searching for exceptions explicitly.
+ *
+ * @param {any[]} msg – Parameters as you would pass them to console.log
+ * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
+ *
+ *   - level: one of the log levels; this parameter is required.
+ */
+const messageFormatJson = (msg, opts) => {
+  const { level = 'info', ...serialzeOpts } = opts || {};
+
+  let data = {};
+
+  const setReserved = (name, val) => {
+    if (name in data) {
+      error("Can't log the", name, "field using the json formatter. It is a reserved field!");
+    }
+    data[name] = val;
+  }
+
+  // Try encoding the last item as json; provided there is a last
+  // item; it is not a string and it can be encoded as json.
+  if (!empty(msg) && type(last(msg)) !== String) {
+    let lst = last(msg);
+
+    // Exceptions are encoded as the exception field in json
+    if (lst instanceof Error) {
+      lst = {exception: lst};
+    }
+
+    // Try json encoding the field; if this is supported
+    try {
+      lst = jsonifyForLog(lst);
+    } catch (er) {
+      lst = undefined;
+      if (!(er instanceof TraitNotImplemented)) {
+        throw er;
+      }
+    }
+
+    // Was successful
+    if (type(lst) === Object) {
+      data = lst;
+      msg = list(take(msg, size(msg) - 1));
+    }
+  }
+
+  // As advised by loggly staff, sending an explicit timestamp is a hidden feature
+  // that allows us to preserve chronological consistency.
+  // It currently doesn't work. Need to recheck with the loggly staff.
+  setReserved('timestamp', new Date());
+  setReserved('level', level);
+  if (!empty(msg)) {
+    setReserved('message', serializeMessage(msg, this.fmtOpts));
+  }
+
+  return data;
+};
+
+lst = undefined;
+/**
  *
  * Uses a fairly simple interface to avoid complexity for use cases in
  * which is not required. Can be used to dispatch logging to more
@@ -173,30 +314,37 @@ const jsonEncodeMessage = (msg, opts = {}) => {
  *
  * @implements Logger
  * @class
- * @parameter {Object} opts – Currently supports one option:
- *   loglevel – One of the log levels described in the Logger interface.
- *     Messages below this log level will not be printed.
- *     Defaults to info.
+ * @param {Object} opts – Configuration object
  *
- *   The rest of the options will be passed to serialize…
+ *   - `level`: Default `info`; The minimum log level to sent to loggly
+ *   - `formatter`: Default `messageFormatConsole`; A formatter producing strings
+ *
+ *   All other options are forwarded to the formatter.
  */
 class ConsoleLogger {
-  /*
+
+  /**
    * The minimum log level for messages to be printed.
-   * Feel free to change to one of the levels described in the Logger
-   * interface.
+   * Feel free to change to one of the available levels.
    * @member {string} level
    */
 
   /**
-   * Options that will be passed to `serializeMessage()`;
+   * Formatter used to format all the messages.
+   * Must yield an object suitable for passing to JSON.serialize
    * Feel free to mutate or exchange.
-   * @member {object} serializeOpts
+   * @member {Function} formatter
+   */
+
+  /**
+   * Options that will be passed to the formatter;
+   * Feel free to mutate or exchange.
+   * @member {object} fmtOpts
    */
 
   constructor(opts = {}) {
-    const { level = 'info', ...serializeOpts } = opts;
-    Object.assign(this, { level, serializeOpts });
+    const { level = 'info', formatter = messageFormatConsole, ...fmtOpts } = opts;
+    assign(this, {level, formatter, fmtOpts});
   }
 
   log(msg, opts = {}) {
@@ -206,8 +354,7 @@ class ConsoleLogger {
     if (numericLogLevel(level) <= numericLogLevel(this.level)) {
       // Logs should go to stderr; this is only correct in node;
       // in the browser we should use console.log
-      const pref = level !== 'info' ? `[${level.toUpperCase()}] ` : '';
-      console.error(`${pref}${serializeMessage(msg, { colors: true })}`);
+      console.error(this.formatter(msg, {...this.fmtOpts, level}));
     }
   }
 }
@@ -256,13 +403,13 @@ class MultiLogger {
   }
 
   log(msg, opts = undefined) {
-    // eslint-disable-next-line no-unused-vars
-    each(this.loggers, async ([_, sub]) => {
+    each(this.loggers, async ([name, sub]) => {
       // We wrap each logging in separate try/catch blocks so exceptions
       // on one logger are isolated from jumping over to other loggers
       try {
         await sub.log(msg, opts);
       } catch (err) {
+        console.log("ERR", err)
         const metaErr = 'MultiLogger encountered exception while logging to to';
         // This prevents recursively triggering errors again and again
         if (msg[0] !== metaErr) {
@@ -284,9 +431,12 @@ class MultiLogger {
  * @class
  * @implements Logger
  * @param {WritableStream} stream - The stream to log to
- * @param {Object} opts – Configuration object; contains only one key at
- *   the moment: `level` - The log level which can be one of `error, warn,
- *   info, verbose` and `debug`.
+ * @param {Object} opts – Configuration object
+ *
+ *   - `level`: Default `info`; The minimum log level to sent to loggly
+ *   - `formatter`: Default `messageFormatTechinal`; A formatter producing strings
+ *
+ *   All other options are forwarded to the formatter.
  */
 class StreamLogger {
   /**
@@ -296,20 +446,26 @@ class StreamLogger {
 
   /**
    * The minimum log level for messages to be printed.
-   * Feel free to change to one of the levels described in the Logger
-   * interface.
+   * Feel free to change to one of the available levels.
    * @member {string} level
    */
 
   /**
-   * Options that will be passed to `serializeMessage()`;
+   * Formatter used to format all the messages.
+   * Must yield an object suitable for passing to JSON.serialize
    * Feel free to mutate or exchange.
-   * @member {object} serializeOpts
+   * @member {Function} formatter
+   */
+
+  /**
+   * Options that will be passed to the formatter;
+   * Feel free to mutate or exchange.
+   * @member {object} fmtOpts
    */
 
   constructor(stream, opts = {}) {
-    const { level = 'info', ...serializeOpts } = opts;
-    Object.assign(this, { stream, level, serializeOpts });
+    const { level = 'info', formatter = messageFormatTechnical, ...fmtOpts } = opts;
+    assign(this, {stream, level, formatter, fmtOpts});
   }
 
   log(msg, opts = {}) {
@@ -318,8 +474,7 @@ class StreamLogger {
       return;
     }
 
-    this.stream.write(`[${level.toUpperCase()}] `);
-    this.stream.write(serializeMessage(msg, this.serializeOpts));
+    this.stream.write(this.formatter(msg, {...this.fmtOpts, level}));
     this.stream.write('\n');
   }
 }
@@ -331,9 +486,12 @@ class StreamLogger {
  * @extends StreamLogger
  * @implements Logger
  * @param {String} name - The name of the file to log to
- * @param {Object} opts – Configuration object; contains only one key at
- *   the moment: `level` - The log level which can be one of `error, warn,
- *   info, verbose` and `debug`.
+ * @param {Object} opts – Configuration object
+ *
+ *   - `level`: Default `info`; The minimum log level to sent to loggly
+ *   - `formatter`: Default `messageFormatTechnical`; A formatter producing strings
+ *
+ *   All other options are forwarded to the formatter.
  */
 class FileLogger extends StreamLogger {
   constructor(name, opts = {}) {
@@ -346,39 +504,44 @@ class FileLogger extends StreamLogger {
  *
  * @class
  * @implements Logger
- * @param {Object} opts – Configuration object; contains only one key at
- *   the moment: `level` - The log level which can be one of `error, warn,
- *   info, verbose` and `debug`.
+ * @class
+ * @param {Object} opts – Configuration object
+ *
+ *   - `level`: Default `info`; The minimum log level to sent to loggly
+ *   - `formatter`: Default `messageFormatSimple`; A formatter producing any format.
+ *
+ *   All other options are forwarded to the formatter.
  */
 class MemLogger {
-  /**
-   * The buffer this records to.
-   * Each element is a message, without the newline at the end.
-   * @member {String[]} buf
-   */
 
   /**
    * The minimum log level for messages to be printed.
-   * Feel free to change to one of the levels described in the Logger
-   * interface.
+   * Feel free to change to one of the available levels.
    * @member {string} level
    */
 
   /**
-   * Options that will be passed to `serializeMessage()`;
+   * Formatter used to format all the messages.
+   * Must yield an object suitable for passing to JSON.serialize
    * Feel free to mutate or exchange.
-   * @member {object} serializeOpts
+   * @member {Function} formatter
+   */
+
+  /**
+   * Options that will be passed to the formatter;
+   * Feel free to mutate or exchange.
+   * @member {object} fmtOpts
    */
 
   constructor(opts = {}) {
-    const { level = 'info', ...serializeOpts } = opts;
-    Object.assign(this, { level, serializeOpts, buf: [] });
+    const { level = 'info', formatter = messageFormatSimple, ...fmtOpts } = opts;
+    assign(this, {level, formatter, fmtOpts});
   }
 
   log(msg, opts = {}) {
     const { level = 'info' } = opts || {};
     if (numericLogLevel(level) <= numericLogLevel(this.level)) {
-      this.buf.push(`[${level.toUpperCase()}] ${serializeMessage(msg, this.serializeOpts)}`);
+      this.buf.push(this.formatter(msg, {...this.fmtOpts, level}));
     }
   }
 }
@@ -463,6 +626,20 @@ const verbose = (...msg) => log(msg, { level: 'verbose' }, ...msg);
  * @param {...Any} ...msg – The message as you would hand it to console.log
  */
 const debug = (...msg) => log(msg, { level: 'debug' });
+
+/**
+ * Uses the currently installed logger to print a trace level message
+ * @function
+ * @param {...Any} ...msg – The message as you would hand it to console.log
+ */
+const trace = (...msg) => log(msg, { level: 'trace' }, ...msg);
+
+/**
+ * Uses the currently installed logger to print a silly level message
+ * @function
+ * @param {...Any} ...msg – The message as you would hand it to console.log
+ */
+const silly = (...msg) => log(msg, { level: 'silly' }, ...msg);
 
 /**
  * Record the log files with debug granularity while the given function is running.
@@ -598,7 +775,9 @@ const assertAsyncLogs = async (opts, fn, logs) => {
 module.exports = {
   numericLogLevel,
   serializeMessage,
-  jsonEncodeMessage,
+  messageFormatSimple,
+  messageFormatTechinal,
+  messageFormatJson,
   ConsoleLogger,
   MultiLogger,
   StreamLogger,
@@ -612,6 +791,8 @@ module.exports = {
   warn,
   verbose,
   debug,
+  trace,
+  silly,
   recordLogs,
   assertLogs,
   recordAsyncLogs,

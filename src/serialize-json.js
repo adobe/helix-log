@@ -21,11 +21,15 @@ JsonifyForLog.impl(String, identity);
 JsonifyForLog.impl(Number, identity);
 JsonifyForLog.impl(Boolean, identity);
 JsonifyForLog.impl(null, identity);
-JsonifyForLog.impl(Object, what => obj(map(what, map(jsonifyForLog))));
-JsonifyForLog.impl(Array, what => list(map(what, jsonifyForLog)));
-JsonifyForLog.impl(Map, what => ({
-  $type: 'Map',
-  values: list(map(map(jsonifyForLog), what)),
+JsonifyForLog.impl(Object, (what) => obj(map(what, map(jsonifyForLog))));
+JsonifyForLog.impl(Array, (what) => list(map(what, jsonifyForLog)));
+
+JsonifyForLog.impl(Date, (what) => what.toJSON());
+JsonifyForLog.impl(URL, (what) => what.toString());
+
+JsonifyForLog.impl(Map, (what) => ({
+  '$type': 'Map',
+  'values': list(map(map(jsonifyForLog), what))
 }));
 JsonifyForLog.impl(Set, what => ({
   $type: 'Set',

@@ -10,12 +10,26 @@
  * governing permissions and limitations under the License.
  */
 
+const { assign } = Object;
 const phin = require('phin');
-const {
-  last, empty, size, take, type, TraitNotImplemented, list,
-} = require('ferrum');
-const { jsonifyForLog } = require('./serialize-json');
-const { numericLogLevel, error, serializeMessage } = require('./log');
+const { last, empty, size, take, type, TraitNotImplemented, isdef, list } = require('ferrum');
+const { numericLogLevel, error, serializeMessage, messageFormatJson } = require('./log');
+
+/**
+ * Pretty much the json logger.
+ *
+ * The only difference is that the timestamp is an integer containing the
+ * number of milliseconds since 1970-01-01.
+ *
+ * @param {any[]} msg – Parameters as you would pass them to console.log
+ * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
+ *
+ *   - level: one of the log levels; this parameter is required.
+ */
+const messageFormatLoggly = (...args) => ({
+  ...messageFormatJson(...args),
+  timestamp: new Date().getTime(),
+});
 
 /**
  * Sends log messages to the loggly message logging service.
@@ -23,9 +37,12 @@ const { numericLogLevel, error, serializeMessage } = require('./log');
  * @class
  * @implements Logger
  * @param {String} logglyToken - The token to use when authenticating with loggly.
- * @param {Object} opts – Configuration object; contains only one key at
- *   the moment: `level` - The log level which can be one of `error, warn,
- *   info, verbose` and `debug`.
+ * @param {Object} opts – Configuration object
+ *
+ *   - `level`: Default `info`; The minimum log level to sent to loggly
+ *   - `formatter`: Default `messageFormatLoggly`; A formatter producing json
+ *
+ *   All other options are forwarded to the formatter.
  */
 class LogglyLogger {
   /**
@@ -35,20 +52,25 @@ class LogglyLogger {
 
   /**
    * The minimum log level for messages to be printed.
-   * Feel free to change to one of the levels described in the Logger
-   * interface.
+   * Feel free to change to one of the available levels.
    * @member {string} level
    */
 
   /**
-   * Options that will be passed to `serializeMessage()`;
+   * Formatter used to format all the messages.
+   * Must yield an object suitable for passing to JSON.serialize
+   * @member {Function} formatter
+   */
+
+  /**
+   * Options that will be passed to the formatter;
    * Feel free to mutate or exchange.
-   * @member {object} serializeOpts
+   * @member {object} fmtOpts
    */
 
   constructor(logglyToken, opts = {}) {
-    const { level = 'info', ...serializeOpts } = opts;
-    Object.assign(this, { logglyToken, level, serializeOpts });
+    const { level = 'info', formatter = messageFormatLoggly, ...fmtOpts } = opts;
+    assign(this, {logglyToken, level, formatter, fmtOpts});
   }
 
   log(msg, opts = {}) {
@@ -57,68 +79,15 @@ class LogglyLogger {
       return undefined;
     }
 
-    // eslint-disable-next-line no-console
-    console.log('SEND', this._serializeMsg(level, msg));
     return phin({
       url: `http://logs-01.loggly.com/inputs/${this.logglyToken}/tag/http/`,
       method: 'POST',
-      data: this._serializeMsg(level, msg),
+      data: this.formatter(msg, {...this.fmtOpts, level}),
       headers: {
         'Content-Type': 'application/json',
       },
     });
   }
-
-  _serializeMsg(level, msg) {
-    let data = {};
-
-    const setReserved = (name, val) => {
-      if (name in data) {
-        error("Can't log the", name, 'field to loggly. It is a reserved field!');
-      }
-      data[name] = val;
-    };
-
-    // Try encoding the last item as json; provided there is a last
-    // item; it is not a string and it can be encoded as json.
-    if (!empty(msg) && type(last(msg)) !== String) {
-      const lst = this._serializeLast(last(msg));
-      if (type(lst) === Object) {
-        data = lst;
-        // eslint-disable-next-line no-param-reassign
-        msg = list(take(msg, size(msg) - 1));
-      }
-    }
-
-    // As advised by loggly staff, sending an explicit timestamp is a hidden feature
-    // that allows us to preserve chronological consistency.
-    // It currently doesn't work. Need to recheck with the loggly staff.
-    setReserved('timestamp', new Date().getTime());
-    setReserved('level', level);
-    if (!empty(msg)) {
-      setReserved('message', serializeMessage(msg, this.serializeOpts));
-    }
-
-    return data;
-  }
-
-  _serializeLast(one) {
-    // Exceptions are encoded as the exception field in json
-    if (one instanceof Error) {
-      return this._serializeLast({ exception: one });
-    }
-
-    // Try json encoding the field; if this is supported
-    try {
-      return jsonifyForLog(one);
-    } catch (er) {
-      if (!(er instanceof TraitNotImplemented)) {
-        throw er;
-      }
-    }
-
-    return undefined;
-  }
-}
+};
 
 module.exports = { LogglyLogger };
