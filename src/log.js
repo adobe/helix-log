@@ -14,11 +14,17 @@
 
 const { assign } = Object;
 const assert = require('assert');
+
 const { abs, floor } = Math;
 const { createWriteStream } = require('fs');
 const { inspect } = require('util');
-const { black, bgMagenta, bgRed, bgYellow, bgBlackBright, bgBlueBright } = require('colorette');
-const { dict, exec, isdef, each, join, empty, type, last, TraitNotImplemented, list, take, size } = require('ferrum');
+const {
+  black, bgRed, bgYellow, bgBlackBright, bgBlueBright,
+} = require('colorette');
+const {
+  dict, exec, isdef, each, join, empty, type, last, TraitNotImplemented,
+  list, take, size, setdefault, repeat,
+} = require('ferrum');
 const { jsonifyForLog } = require('./serialize-json');
 
 // This is the superset of log levels supported by console, bunyan and winston
@@ -30,7 +36,7 @@ const _loglevelMap = {
   verbose: 4,
   debug: 5,
   trace: 6,
-  silly: 7
+  silly: 7,
 };
 
 /**
@@ -131,7 +137,7 @@ const serializeMessage = (msg, opts) => msg.map(v => (typeof (v) === 'string' ? 
  */
 const messageFormatSimple = (msg, opts) => {
   const { level = 'info', ...serialzeOpts } = opts || {};
-  return `[${level.toUpperCase()}] ${serializeMessage(msg, fmtOpts)}`
+  return `[${level.toUpperCase()}] ${serializeMessage(msg, serialzeOpts)}`;
 };
 
 /**
@@ -145,18 +151,22 @@ const messageFormatSimple = (msg, opts) => {
  *
  *   - level: one of the log levels; this parameter is required.
  */
-const messageFormatTechinal = (msg, opts) => {
+const messageFormatTechnical = (msg, opts) => {
   const { level = 'info', ...serialzeOpts } = opts || {};
-  const twoDigit = (v) => `${v < 10 ? '0' : ''}${v}`;
+  const digit = (v, n) => {
+    const num = String(v);
+    const pref = join(take(repeat('0'), n - size(num)), '');
+    return pref + num;
+  };
+  const d = new Date();
   const tz = d.getTimezoneOffset();
-  const now = new Date();
   const pref = [ // [LEVEL YYYY-MM-DD hh:mm:ss.millis +tzh:tzm]
     level.toUpperCase(),
-    `${d.getFullYear()}-${twoDigit(d.getMonth())}-${twoDigit(d.getDay())}`,
-    `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}.${d.getMilliseconds()}`,
-    `${tz > 0 ? '+' : '-'}${twoDigit(abs(floor(tz / 60)))}:${twoDigit(abs(tz % 60))}`
+    `${d.getFullYear()}-${digit(d.getMonth(), 2)}-${digit(d.getDay(), 2)}`,
+    `${digit(d.getHours(), 2)}:${digit(d.getMinutes(), 2)}:${digit(d.getSeconds(), 2)}.${digit(d.getMilliseconds(), 3)}`,
+    `${tz > 0 ? '+' : '-'}${digit(abs(floor(tz / 60)), 2)}:${digit(abs(tz % 60), 2)}`,
   ];
-  return `[${join(pref, ' ')}] ${serializeMessage(msg, fmtOpts)}`
+  return `[${join(pref, ' ')}] ${serializeMessage(msg, serialzeOpts)}`;
 };
 
 /**
@@ -172,7 +182,7 @@ const messageFormatTechinal = (msg, opts) => {
 const messageFormatConsole = (msg, opts) => {
   const { level = 'info', ...serialzeOpts } = opts || {};
 
-  const ser = serializeMessage(msg, { colors: true, ...this.fmtOpts });
+  const ser = serializeMessage(msg, { colors: true, ...serialzeOpts });
   const pref = `[${level.toUpperCase()}]`;
 
   if (level === 'info') {
@@ -192,7 +202,6 @@ const messageFormatConsole = (msg, opts) => {
   }
 
   return `${bgBlackBright(pref)} ${ser}`;
-
 };
 
 /**
@@ -208,15 +217,21 @@ const messageFormatConsole = (msg, opts) => {
  *    JSON.stringify(messageFormatJson(...args));
  * ```
  *
+ * You can also wrap this to provide extra default fields:
+ *
+ * ```
+ * const messageFormatMyJson = (...args) => {
+ *    pid: process.pid,
+ *    ...JSON.stringify(messageFormatJson(...args)),
+ * }
+ * ```
+ *
  * If the last element in the message can be converted to json-like using
  * jsonifyForLog, then all the resulting fields will be included in the json-like
  * object generated.
  *
- * The generated json must *not* contain the fields message, timestamp and
- * level as these are reserved and used by the formatter.
- *
- * If that element is the sole element, no message field will be included;
- * in this case you may explicitly set a message fiel in the last object.
+ * The field `message` is reserved. The fields `level` and `timestamp` are filled with
+ * default values.
  *
  * If the last object is an exception, it will be sent as { exception: $exception };
  * this serves to facilitate searching for exceptions explicitly.
@@ -233,10 +248,10 @@ const messageFormatJson = (msg, opts) => {
 
   const setReserved = (name, val) => {
     if (name in data) {
-      error("Can't log the", name, "field using the json formatter. It is a reserved field!");
+      error("Can't log the", name, 'field using the json formatter. It is a reserved field!');
     }
     data[name] = val;
-  }
+  };
 
   // Try encoding the last item as json; provided there is a last
   // item; it is not a string and it can be encoded as json.
@@ -245,7 +260,7 @@ const messageFormatJson = (msg, opts) => {
 
     // Exceptions are encoded as the exception field in json
     if (lst instanceof Error) {
-      lst = {exception: lst};
+      lst = { exception: lst };
     }
 
     // Try json encoding the field; if this is supported
@@ -265,19 +280,16 @@ const messageFormatJson = (msg, opts) => {
     }
   }
 
-  // As advised by loggly staff, sending an explicit timestamp is a hidden feature
-  // that allows us to preserve chronological consistency.
-  // It currently doesn't work. Need to recheck with the loggly staff.
-  setReserved('timestamp', new Date());
-  setReserved('level', level);
+  setdefault(data, 'timestamp', new Date());
+  setdefault(data, 'level', level);
+
   if (!empty(msg)) {
-    setReserved('message', serializeMessage(msg, this.fmtOpts));
+    setReserved('message', serializeMessage(msg, serialzeOpts));
   }
 
   return data;
 };
 
-lst = undefined;
 /**
  *
  * Uses a fairly simple interface to avoid complexity for use cases in
@@ -322,7 +334,6 @@ lst = undefined;
  *   All other options are forwarded to the formatter.
  */
 class ConsoleLogger {
-
   /**
    * The minimum log level for messages to be printed.
    * Feel free to change to one of the available levels.
@@ -344,7 +355,7 @@ class ConsoleLogger {
 
   constructor(opts = {}) {
     const { level = 'info', formatter = messageFormatConsole, ...fmtOpts } = opts;
-    assign(this, {level, formatter, fmtOpts});
+    assign(this, { level, formatter, fmtOpts });
   }
 
   log(msg, opts = {}) {
@@ -354,7 +365,7 @@ class ConsoleLogger {
     if (numericLogLevel(level) <= numericLogLevel(this.level)) {
       // Logs should go to stderr; this is only correct in node;
       // in the browser we should use console.log
-      console.error(this.formatter(msg, {...this.fmtOpts, level}));
+      console.error(this.formatter(msg, { ...this.fmtOpts, level }));
     }
   }
 }
@@ -409,7 +420,6 @@ class MultiLogger {
       try {
         await sub.log(msg, opts);
       } catch (err) {
-        console.log("ERR", err)
         const metaErr = 'MultiLogger encountered exception while logging to to';
         // This prevents recursively triggering errors again and again
         if (msg[0] !== metaErr) {
@@ -418,7 +428,7 @@ class MultiLogger {
           await new Promise(res => setImmediate(res));
           // Defensive coding: Not printing the message here because the message
           // may have triggered the exception…
-          error(metaErr, sub, ': ', err);
+          error(name, '-', metaErr, sub, ': ', err);
         }
       }
     });
@@ -465,7 +475,9 @@ class StreamLogger {
 
   constructor(stream, opts = {}) {
     const { level = 'info', formatter = messageFormatTechnical, ...fmtOpts } = opts;
-    assign(this, {stream, level, formatter, fmtOpts});
+    assign(this, {
+      stream, level, formatter, fmtOpts,
+    });
   }
 
   log(msg, opts = {}) {
@@ -474,7 +486,7 @@ class StreamLogger {
       return;
     }
 
-    this.stream.write(this.formatter(msg, {...this.fmtOpts, level}));
+    this.stream.write(this.formatter(msg, { ...this.fmtOpts, level }));
     this.stream.write('\n');
   }
 }
@@ -513,6 +525,10 @@ class FileLogger extends StreamLogger {
  *   All other options are forwarded to the formatter.
  */
 class MemLogger {
+  /**
+   * The buffer that stores all separate, formatted log messages.
+   * @member {Array} buf
+   */
 
   /**
    * The minimum log level for messages to be printed.
@@ -535,13 +551,15 @@ class MemLogger {
 
   constructor(opts = {}) {
     const { level = 'info', formatter = messageFormatSimple, ...fmtOpts } = opts;
-    assign(this, {level, formatter, fmtOpts});
+    assign(this, {
+      level, formatter, fmtOpts, buf: [],
+    });
   }
 
   log(msg, opts = {}) {
     const { level = 'info' } = opts || {};
     if (numericLogLevel(level) <= numericLogLevel(this.level)) {
-      this.buf.push(this.formatter(msg, {...this.fmtOpts, level}));
+      this.buf.push(this.formatter(msg, { ...this.fmtOpts, level }));
     }
   }
 }
@@ -776,7 +794,8 @@ module.exports = {
   numericLogLevel,
   serializeMessage,
   messageFormatSimple,
-  messageFormatTechinal,
+  messageFormatTechnical,
+  messageFormatConsole,
   messageFormatJson,
   ConsoleLogger,
   MultiLogger,

@@ -10,36 +10,62 @@
  * governing permissions and limitations under the License.
  */
 
+/* eslint-disable no-use-before-define */
+
 const {
-  Trait, list, map, obj, identity, type, typename,
+  isdef, Trait, list, map, obj, identity, type, typename,
 } = require('ferrum');
 
-const JsonifyForLog = new Trait('JsonifyForLog');
-
+/**
+ * jsonify the given data using the JsonifyForLog trait.
+ *
+ * Takes any javascript object and produces an object tree
+ * that only contains json compatible objects (objects, arrays,
+ * numbers, bools, strings and such).
+ *
+ * This is a no-op if the input is already json compatible.
+ *
+ * Note that this is specifically designed to serialize data for structured
+ * logging. This is NOT suitable for proper serialization of json; specifically
+ * this may loose information in cases where that makes sense.
+ *
+ * Features a default converter for any exception/subclass of Error.
+ *
+ * @function
+ * @throws TraitNotImplemented If any object in the given object tree
+ *   can not be converted to json-compatible
+ * @param {Any} What The object to convert
+ * @returns {Any} Json compatible object
+ */
 const jsonifyForLog = what => JsonifyForLog.invoke(what);
+
+/**
+ * Trait used to serialize json objects to json. See jsonifyForLog.
+ */
+const JsonifyForLog = new Trait('JsonifyForLog');
 JsonifyForLog.impl(String, identity);
 JsonifyForLog.impl(Number, identity);
 JsonifyForLog.impl(Boolean, identity);
 JsonifyForLog.impl(null, identity);
-JsonifyForLog.impl(Object, (what) => obj(map(what, map(jsonifyForLog))));
-JsonifyForLog.impl(Array, (what) => list(map(what, jsonifyForLog)));
+JsonifyForLog.impl(Object, what => obj(map(what, map(jsonifyForLog))));
+JsonifyForLog.impl(Array, what => list(map(what, jsonifyForLog)));
 
-JsonifyForLog.impl(Date, (what) => what.toJSON());
-JsonifyForLog.impl(URL, (what) => what.toString());
+JsonifyForLog.impl(Date, what => what.toJSON());
+JsonifyForLog.impl(URL, what => what.toString());
 
-JsonifyForLog.impl(Map, (what) => ({
-  '$type': 'Map',
-  'values': list(map(map(jsonifyForLog), what))
+JsonifyForLog.impl(Map, what => ({
+  $type: 'Map',
+  values: list(map(what, inn => list(map(inn, jsonifyForLog)))),
 }));
 JsonifyForLog.impl(Set, what => ({
   $type: 'Set',
-  values: list(map(jsonifyForLog, what)),
+  values: list(map(what, jsonifyForLog)),
 }));
 JsonifyForLog.implWild((wild) => {
   // issubclass
-  if (wild.prototype instanceof Error || wild === Error) {
+  if (isdef(wild) && (wild.prototype instanceof Error || wild === Error)) {
     return what => ({
-      $class: typename(type(what)),
+      $type: typename(type(what)),
       name: what.name,
       message: what.message,
       stack: what.stack,

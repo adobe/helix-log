@@ -12,8 +12,7 @@
 
 const { assign } = Object;
 const phin = require('phin');
-const { last, empty, size, take, type, TraitNotImplemented, isdef, list } = require('ferrum');
-const { numericLogLevel, error, serializeMessage, messageFormatJson } = require('./log');
+const { numericLogLevel, messageFormatJson } = require('./log');
 
 /**
  * Pretty much the json logger.
@@ -70,7 +69,9 @@ class LogglyLogger {
 
   constructor(logglyToken, opts = {}) {
     const { level = 'info', formatter = messageFormatLoggly, ...fmtOpts } = opts;
-    assign(this, {logglyToken, level, formatter, fmtOpts});
+    assign(this, {
+      logglyToken, level, formatter, fmtOpts,
+    });
   }
 
   log(msg, opts = {}) {
@@ -82,12 +83,12 @@ class LogglyLogger {
     return phin({
       url: `http://logs-01.loggly.com/inputs/${this.logglyToken}/tag/http/`,
       method: 'POST',
-      data: this.formatter(msg, {...this.fmtOpts, level}),
+      data: this.formatter(msg, { ...this.fmtOpts, level }),
       headers: {
         'Content-Type': 'application/json',
       },
     });
   }
-};
+}
 
 module.exports = { LogglyLogger };

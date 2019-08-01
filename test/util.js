@@ -12,13 +12,21 @@
 
 /* eslint-env mocha */
 
-'use strict';
-
 const assert = require('assert');
-const index = require('../src/index.js');
+const { type, typename, assertEquals } = require('ferrum');
 
-describe('Index Tests', () => {
-  it('index exports logs', async () => {
-    assert.equal(typeof index.log, 'function');
+const ckEq = assertEquals;
+
+const ckThrows = (cls, fn) => {
+  let err;
+  assert.throws(fn, (e) => {
+    err = e;
+    return true;
   });
-});
+  assert(err instanceof cls, `Error (${typename(type(err))}) should be an instance of ${typename(cls)}.`);
+  return err;
+};
+
+module.exports = {
+  ckEq, ckThrows,
+};
