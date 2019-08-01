@@ -47,10 +47,8 @@ jobs:
       - store_artifacts:
           path: junit
 
-
   semantic-release:
     executor: node8
-    working_directory: ~/repo
     steps:
       - setup
       - run:
