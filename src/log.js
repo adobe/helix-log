@@ -15,8 +15,11 @@
 const assert = require('assert');
 const { createWriteStream } = require('fs');
 const { inspect } = require('util');
-const { dict, exec, isdef, each } = require('ferrum');
+const {
+  dict, exec, isdef, each,
+} = require('ferrum');
 
+// eslint-disable-next-line no-underscore-dangle
 const _loglevelMap = {
   fatal: 0,
   error: 1,
@@ -80,10 +83,10 @@ const tryInspect = (what, opts) => {
   // this
   exec(async () => {
     if (!opts.recursiveErrorHandling && errors.length > 0) {
-      await new Promise((res) => setImmediate(res));
+      await new Promise(res => setImmediate(res));
       for (const e of errors) {
         const ser = tryInspect(e, { ...opts, recursiveErrorHandling: true });
-        err(`Error while inspecting object for log message: ${ser}`);
+        error(`Error while inspecting object for log message: ${ser}`);
       }
     }
   });
@@ -253,6 +256,7 @@ class MultiLogger {
   }
 
   log(msg, opts = undefined) {
+    // eslint-disable-next-line no-unused-vars
     each(this.loggers, async ([_, sub]) => {
       // We wrap each logging in separate try/catch blocks so exceptions
       // on one logger are isolated from jumping over to other loggers
@@ -264,7 +268,7 @@ class MultiLogger {
         if (msg[0] !== metaErr) {
           // Try actually logging the message before printing the errors
           // at least for loggers that are not async
-          await new Promise((res) => setImmediate(res));
+          await new Promise(res => setImmediate(res));
           // Defensive coding: Not printing the message here because the message
           // may have triggered the exception…
           error(metaErr, sub, ': ', err);
@@ -334,7 +338,7 @@ class StreamLogger {
 class FileLogger extends StreamLogger {
   constructor(name, opts = {}) {
     super(createWriteStream(name, { flags: 'a' }), opts);
-    this.stream.on('error', e => err(`Error writing to file ${name}:`, e));
+    this.stream.on('error', e => error(`Error writing to file ${name}:`, e));
   }
 }
 /**
@@ -614,4 +618,3 @@ module.exports = {
   assertAsyncLogs,
   tryInspect,
 };
-

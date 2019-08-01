@@ -18,8 +18,7 @@ const assert = require('assert');
 const index = require('../src/index.js');
 
 describe('Index Tests', () => {
-  it('index function is present', async () => {
-    const result = await index();
-    assert.equal(result, 'Hello, world.');
+  it('index exports logs', async () => {
+    assert.equal(typeof index.log, 'function');
   });
 });
