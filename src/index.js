@@ -14,18 +14,21 @@ const { readFileSync } = require('fs');
 const { exec, isdef } = require('ferrum');
 
 module.exports = {
+  // eslint-disable-next-line global-require
   ...require('./log'),
+  // eslint-disable-next-line global-require
   ...require('./serialize-json'),
-  ...require('./loggly')
-}
+  // eslint-disable-next-line global-require
+  ...require('./loggly'),
+};
 
 // Make this repo a singleton.
 
 exec(() => {
-  const key = "helix-log-a8b81455-7074-4953-a769-82754b0eb756";
+  const key = 'helix-log-a8b81455-7074-4953-a769-82754b0eb756';
   const me = {
     module,
-    'package': JSON.parse(readFileSync(`${__dirname}/../package.json`, { encoding: 'utf-8' }))
+    package: JSON.parse(readFileSync(`${__dirname}/../package.json`, { encoding: 'utf-8' })),
   };
 
   const subst = global[key];
@@ -36,8 +39,7 @@ exec(() => {
 
   module.exports = subst.module.exports;
   module.exports.warn(
-    'Multiple versions of adobe/helix-log in the same process! ' +
-    'Using one loaded first!', {
+    'Multiple versions of adobe/helix-log in the same process! Using one loaded first!', {
       used: {
         version: subst.package.version,
         filename: subst.module.filename,
@@ -46,5 +48,6 @@ exec(() => {
         version: me.package.version,
         filename: me.module.filename,
       },
-});
+    },
+  );
 });

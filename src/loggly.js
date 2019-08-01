@@ -11,7 +11,9 @@
  */
 
 const phin = require('phin');
-const { last, empty, size, take, type, TraitNotImplemented, isdef, list } = require('ferrum');
+const {
+  last, empty, size, take, type, TraitNotImplemented, list,
+} = require('ferrum');
 const { jsonifyForLog } = require('./serialize-json');
 const { numericLogLevel, error, serializeMessage } = require('./log');
 
@@ -46,23 +48,24 @@ class LogglyLogger {
 
   constructor(logglyToken, opts = {}) {
     const { level = 'info', ...serializeOpts } = opts;
-    Object.assign(this, {logglyToken, level, serializeOpts});
+    Object.assign(this, { logglyToken, level, serializeOpts });
   }
 
-  log(msg, opts={}) {
+  log(msg, opts = {}) {
     const { level = 'info' } = opts || {};
     if (numericLogLevel(level) > numericLogLevel(this.level)) {
-      return;
+      return undefined;
     }
 
-    console.log("SEND", this._serializeMsg(level, msg));
+    // eslint-disable-next-line no-console
+    console.log('SEND', this._serializeMsg(level, msg));
     return phin({
       url: `http://logs-01.loggly.com/inputs/${this.logglyToken}/tag/http/`,
       method: 'POST',
       data: this._serializeMsg(level, msg),
       headers: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     });
   }
 
@@ -71,10 +74,10 @@ class LogglyLogger {
 
     const setReserved = (name, val) => {
       if (name in data) {
-        error("Can't log the", name, "field to loggly. It is a reserved field!");
+        error("Can't log the", name, 'field to loggly. It is a reserved field!');
       }
       data[name] = val;
-    }
+    };
 
     // Try encoding the last item as json; provided there is a last
     // item; it is not a string and it can be encoded as json.
@@ -82,6 +85,7 @@ class LogglyLogger {
       const lst = this._serializeLast(last(msg));
       if (type(lst) === Object) {
         data = lst;
+        // eslint-disable-next-line no-param-reassign
         msg = list(take(msg, size(msg) - 1));
       }
     }
@@ -101,7 +105,7 @@ class LogglyLogger {
   _serializeLast(one) {
     // Exceptions are encoded as the exception field in json
     if (one instanceof Error) {
-      return this._serializeLast({exception: one});
+      return this._serializeLast({ exception: one });
     }
 
     // Try json encoding the field; if this is supported
@@ -115,6 +119,6 @@ class LogglyLogger {
 
     return undefined;
   }
-};
+}
 
 module.exports = { LogglyLogger };

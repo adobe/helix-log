@@ -10,33 +10,35 @@
  * governing permissions and limitations under the License.
  */
 
-const { Trait, list, map, obj, identity, type, typename } = require('ferrum');
-
-const jsonifyForLog = (what) => JsonifyForLog.invoke(what);
+const {
+  Trait, list, map, obj, identity, type, typename,
+} = require('ferrum');
 
 const JsonifyForLog = new Trait('JsonifyForLog');
+
+const jsonifyForLog = what => JsonifyForLog.invoke(what);
 JsonifyForLog.impl(String, identity);
 JsonifyForLog.impl(Number, identity);
 JsonifyForLog.impl(Boolean, identity);
 JsonifyForLog.impl(null, identity);
-JsonifyForLog.impl(Object, (what) => obj(map(what, map(jsonifyForLog))));
-JsonifyForLog.impl(Array, (what) => list(map(what, jsonifyForLog)));
-JsonifyForLog.impl(Map, (what) => ({
-  '$type': 'Map',
-  'values': list(map(map(jsonifyForLog), what))
+JsonifyForLog.impl(Object, what => obj(map(what, map(jsonifyForLog))));
+JsonifyForLog.impl(Array, what => list(map(what, jsonifyForLog)));
+JsonifyForLog.impl(Map, what => ({
+  $type: 'Map',
+  values: list(map(map(jsonifyForLog), what)),
 }));
-JsonifyForLog.impl(Set, (what) => ({
-  '$type': 'Set',
-  'values': list(map(jsonifyForLog, what))
+JsonifyForLog.impl(Set, what => ({
+  $type: 'Set',
+  values: list(map(jsonifyForLog, what)),
 }));
 JsonifyForLog.implWild((wild) => {
   // issubclass
   if (wild.prototype instanceof Error || wild === Error) {
-    return (what) => ({
-      '$class': typename(type(what)),
-      'name': what.name,
-      'message': what.message,
-      'stack': what.stack
+    return what => ({
+      $class: typename(type(what)),
+      name: what.name,
+      message: what.message,
+      stack: what.stack,
     });
   }
   return undefined;
