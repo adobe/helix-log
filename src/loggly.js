@@ -40,6 +40,7 @@ const messageFormatLoggly = (...args) => ({
  *
  *   - `level`: Default `info`; The minimum log level to sent to loggly
  *   - `formatter`: Default `messageFormatLoggly`; A formatter producing json
+ *   - `logglyUrl`: Default `http://logs-01.loggly.com/inputs`; Loggly api URL prefix
  *
  *   All other options are forwarded to the formatter.
  */
@@ -67,10 +68,20 @@ class LogglyLogger {
    * @member {object} fmtOpts
    */
 
+  /**
+   * Loggly URL prefix. Can be used to change the location of the api.
+   * @member {string} logglyUrl
+   */
+
   constructor(logglyToken, opts = {}) {
-    const { level = 'info', formatter = messageFormatLoggly, ...fmtOpts } = opts;
+    const {
+      level = 'info',
+      formatter = messageFormatLoggly,
+      logglyUrl = 'https://logs-01.loggly.com/inputs',
+      ...fmtOpts
+    } = opts;
     assign(this, {
-      logglyToken, level, formatter, fmtOpts,
+      logglyToken, level, formatter, fmtOpts, logglyUrl,
     });
   }
 
@@ -80,8 +91,10 @@ class LogglyLogger {
       return undefined;
     }
 
+    // NOTE: We do not check that loggly returns `{response: ok}` as there
+    // is at leas one condition (wrong token) in which
     return phin({
-      url: `http://logs-01.loggly.com/inputs/${this.logglyToken}/tag/http/`,
+      url: `${this.logglyUrl}/${this.logglyToken}/tag/http/`,
       method: 'POST',
       data: this.formatter(msg, { ...this.fmtOpts, level }),
       headers: {
@@ -91,4 +104,4 @@ class LogglyLogger {
   }
 }
 
-module.exports = { LogglyLogger };
+module.exports = { messageFormatLoggly, LogglyLogger };

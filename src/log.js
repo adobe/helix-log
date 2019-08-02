@@ -420,7 +420,7 @@ class MultiLogger {
       try {
         await sub.log(msg, opts);
       } catch (err) {
-        const metaErr = 'MultiLogger encountered exception while logging to to';
+        const metaErr = 'MultiLogger encountered exception while logging to';
         // This prevents recursively triggering errors again and again
         if (msg[0] !== metaErr) {
           // Try actually logging the message before printing the errors
@@ -428,7 +428,7 @@ class MultiLogger {
           await new Promise(res => setImmediate(res));
           // Defensive coding: Not printing the message here because the message
           // may have triggered the exception…
-          error(name, '-', metaErr, sub, ': ', err);
+          error(metaErr, name, '-', sub, ': ', err);
         }
       }
     });

@@ -50,6 +50,9 @@ module.exports = {
 
     'class-methods-use-this': 'off',
     'no-await-in-loop': 'off',
+    'one-var-declaration-per-line': 'off',
+    'one-var': 'off',
+    'no-constant-condition': 'off',
 
     // enforce license header (todo: improve plugin to support patterns for multi-lines)
     'header/header': [2, 'block', ['',

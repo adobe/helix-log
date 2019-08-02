@@ -320,8 +320,8 @@ it('MultiLogger', async () => {
   } finally {
     // Wait a couple of ticks so we can be sure all the error messages
     // where printed
-    for (let i = 0; i < 20; i += 1) {
-      await new Promise(res => setImmediate(res));
+    for (let i = 0; i < 10; i += 1) {
+      await new Promise(res => setTimeout(res, 1));
     }
     rootLogger.loggers = backup;
   }
@@ -333,9 +333,8 @@ it('MultiLogger', async () => {
     join(''),
   );
 
-  assert.strictEqual(logs, `${logOutputSimple
-  }[INFO] Hello World\n`
-    + '[ERROR] MultiLogger encountered exception while logging to to MemLogger { level: \'debug\', formatter: [Function: messageFormatSimple], fmtOpts: {}, buf: null } :  TypeError: Cannot read property \'push\' of null\n\n');
+  assert.strictEqual(logs, `${logOutputSimple}[INFO] Hello World\n`
+    + '[ERROR] MultiLogger encountered exception while logging to foo - MemLogger { level: \'debug\', formatter: [Function: messageFormatSimple], fmtOpts: {}, buf: null } :  TypeError: Cannot read property \'push\' of null\n\n');
 });
 
 it('recordLogs, assertLogs', () => {
