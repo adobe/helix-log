@@ -25,7 +25,7 @@ it('messageFormatLoggly', () => {
   const ser = messageFormatLoggly(['Hello', 'World'], { level: 'info' });
   const d1 = new Date();
   assert(type(ser.timestamp) === Number);
-  assert(d0.getTime() <= ser.timestamp && ser.timestamp >= d1.getTime());
+  assert(d0.getTime() <= ser.timestamp && ser.timestamp <= d1.getTime());
   assert(ser.message === 'Hello World');
 });
 
