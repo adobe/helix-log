@@ -1,6 +1,6 @@
 # Repository Template
 
-Logging service used by Helix CLI.
+Logging service used within the helix project.
 
 ```
 const { info, error } = require('@adobe/helix-log');
