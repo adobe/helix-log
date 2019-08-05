@@ -1,5 +1,14 @@
 # Repository Template
 
+Logging service used by Helix CLI.
+
+```
+const { info, error } = require('@adobe/helix-log');
+
+info('This is an info level message ', { foo: 42 }, '; dumping any javascript variable like console.log is supported');
+error('You can log exceptions like this', new Error('This is a problem'));
+```
+
 ## Status
 [![codecov](https://img.shields.io/codecov/c/github/adobe/helix-log.svg)](https://codecov.io/gh/adobe/helix-log)
 [![CircleCI](https://img.shields.io/circleci/project/github/adobe/helix-log.svg)](https://circleci.com/gh/adobe/helix-log)
