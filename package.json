@@ -4,8 +4,8 @@
   "description": "Logging for Helix",
   "main": "src/index.js",
   "scripts": {
-    "test": "nyc --reporter=text --reporter=lcov --check-coverage --branches 1 --statements 29 --lines 32 mocha",
-    "test-ci": "circleci tests glob 'test/*.test.js' | circleci tests split --split-by=timings | xargs nyc --reporter=text --reporter=lcov mocha -R mocha-junit-reporter && codecov",
+    "test": "nyc --reporter=text --reporter=lcov --check-coverage --branches 65 --statements 92 --lines 96 mocha",
+    "test-ci": "nyc --reporter=text --reporter=lcov --check-coverage --branches 65 --statements 92 --lines 96 mocha -R mocha-junit-reporter && codecov",
     "lint": "./node_modules/.bin/eslint .",
     "semantic-release": "semantic-release",
     "snyk-protect": "snyk protect",
