@@ -1,6 +1,6 @@
-# Repository Template
+# Helix Log Framework
 
-Logging service used within the helix project.
+Logging framework used within the helix project.
 
 ```
 const { info, error } = require('@adobe/helix-log');
