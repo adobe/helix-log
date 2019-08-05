@@ -51,7 +51,9 @@ JsonifyForLog.impl(Object, what => obj(map(what, map(jsonifyForLog))));
 JsonifyForLog.impl(Array, what => list(map(what, jsonifyForLog)));
 
 JsonifyForLog.impl(Date, what => what.toJSON());
-JsonifyForLog.impl(URL, what => what.toString());
+if (typeof URL !== 'undefined') {
+  JsonifyForLog.impl(URL, what => what.toString());
+}
 
 JsonifyForLog.impl(Map, what => ({
   $type: 'Map',
