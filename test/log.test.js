@@ -20,6 +20,7 @@ const { inspect, promisify } = require('util');
 const { v4: uuidgen } = require('uuid');
 const {
   black, bgRed, bgYellow, yellow, green, bgBlackBright, bgBlueBright,
+  options: coloretteOpts,
 } = require('colorette');
 const {
   join, dict, pipe, filter, reject, map,
@@ -35,6 +36,8 @@ const { ckEq } = require('./util');
 
 const readFile = promisify(fs.readFile);
 const unlink = promisify(fs.unlink);
+
+coloretteOpts.enabled = true;
 
 it('numericLogLevel', () => {
   assert.strictEqual(numericLogLevel('fatal'), 0);
