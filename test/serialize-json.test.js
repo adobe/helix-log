@@ -16,6 +16,7 @@
 const {
   each, TraitNotImplemented, typename, type,
 } = require('ferrum');
+const { URL } = require('url');
 const { JsonifyForLog, jsonifyForLog } = require('../src/serialize-json');
 const { ckEq, ckThrows } = require('./util');
 
@@ -35,9 +36,10 @@ describe('serialize-json', () => {
     bang: null,
     borg: [1, 2, 3, 4],
     boom: new Date('2019-08-01T10:16:30.810Z'),
+    alpha: new URL('https://example.com/Foo'),
     beta: { a: 42, b: 23 },
     gamma: new Map([[1, 42], ['asd', 23], [{}, {}]]),
-    delta: new Set([1, 'asd', {}]),
+    delta: new Set([1, 'asd', {}, new URL('https://example.com/bar')]),
     epsilon: new CustomClass(),
     zeta: new CustomException('Hello World'),
   };
@@ -49,6 +51,7 @@ describe('serialize-json', () => {
     bang: null,
     borg: [1, 2, 3, 4],
     boom: '2019-08-01T10:16:30.810Z',
+    alpha: 'https://example.com/Foo',
     beta: { a: 42, b: 23 },
     gamma: {
       $type: 'Map',
@@ -56,7 +59,7 @@ describe('serialize-json', () => {
     },
     delta: {
       $type: 'Set',
-      values: [1, 'asd', {}],
+      values: [1, 'asd', {}, 'https://example.com/bar'],
     },
     epsilon: [1, 2, 3, 4],
     zeta: {

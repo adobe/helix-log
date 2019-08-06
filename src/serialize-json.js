@@ -11,7 +11,7 @@
  */
 
 /* eslint-disable no-use-before-define */
-
+const { URL } = require('url');
 const {
   isdef, Trait, list, map, obj, identity, type, typename,
 } = require('ferrum');
@@ -34,8 +34,8 @@ const {
  * @function
  * @throws TraitNotImplemented If any object in the given object tree
  *   can not be converted to json-compatible
- * @param {Any} What The object to convert
- * @returns {Any} Json compatible object
+ * @param {any} what The object to convert
+ * @returns {any} Json compatible object
  */
 const jsonifyForLog = what => JsonifyForLog.invoke(what);
 
@@ -49,12 +49,8 @@ JsonifyForLog.impl(Boolean, identity);
 JsonifyForLog.impl(null, identity);
 JsonifyForLog.impl(Object, what => obj(map(what, map(jsonifyForLog))));
 JsonifyForLog.impl(Array, what => list(map(what, jsonifyForLog)));
-
 JsonifyForLog.impl(Date, what => what.toJSON());
-if (typeof URL !== 'undefined') {
-  JsonifyForLog.impl(URL, what => what.toString());
-}
-
+JsonifyForLog.impl(URL, what => what.toString());
 JsonifyForLog.impl(Map, what => ({
   $type: 'Map',
   values: list(map(what, inn => list(map(inn, jsonifyForLog)))),
