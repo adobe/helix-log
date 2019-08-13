@@ -53,6 +53,8 @@ module.exports = {
     'one-var-declaration-per-line': 'off',
     'one-var': 'off',
     'no-constant-condition': 'off',
+    'max-classes-per-file': 'off',
+    'arrow-parens': [2, "as-needed", { "requireForBlockBody": true }],
 
     // enforce license header (todo: improve plugin to support patterns for multi-lines)
     'header/header': [2, 'block', ['',
