@@ -265,28 +265,19 @@ it('StreamLogger', () => {
   assert(ss.extract().match(/^\[FATAL \d{4}-\d\d-\d\d \d\d:\d\d:\d\d.\d+ [+-]\d\d:\d\d\] \{ foo: 23 \}\n$/));
 });
 
-const endStreamAndSync = (str) => {
-  const r = new Promise(res => str.on('finish', () => res()));
-  // It's important here that end is called after the promise is
-  // installed since otherwise the finish event may be called before
-  // the promise is setup => the promise is never resolved => infinite wait
-  str.end();
-  return r;
-};
-
 it('FileLogger', async () => {
   const tmpfile = `/tmp/helix-shared-testfile-${uuidgen()}.txt`;
 
   try {
     let logger = new FileLogger(tmpfile, { level: 'debug', formatter: messageFormatSimple });
     testLogger(logger);
-    await endStreamAndSync(logger.stream);
+    logger.close();
     assert.strictEqual(await readFile(tmpfile, { encoding: 'utf-8' }), logOutputSimple);
 
     // Tests that append mode is properly used
     logger = new FileLogger(tmpfile, { level: 'fatal' });
     testLogger(logger);
-    await endStreamAndSync(logger.stream);
+    logger.close();
     const s = await readFile(tmpfile, { encoding: 'utf-8' });
     assert(s.startsWith(logOutputSimple));
     assert(s.match(/\[FATAL \d{4}-\d\d-\d\d \d\d:\d\d:\d\d.\d+ [+-]\d\d:\d\d\] \{ foo: 23 \}$/m));

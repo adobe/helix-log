@@ -16,7 +16,7 @@ const { assign } = Object;
 const assert = require('assert');
 
 const { abs, floor } = Math;
-const { createWriteStream } = require('fs');
+const { openSync, closeSync, writeSync } = require('fs');
 const { inspect } = require('util');
 const {
   black, bgRed, bgYellow, bgBlackBright, bgBlueBright,
@@ -492,12 +492,30 @@ class StreamLogger {
 }
 
 /**
- * Log to a file.
+ * Logger specifically designed for logging to unix file descriptors.
+ *
+ * This logger is synchronous: It uses blocking syscalls and thus guarantees
+ * that all data is written even if process.exit() is called immediately after
+ * logging.
+ * For normal files this is not a problem as linux will never block when writing
+ * to files, for sockets, pipes and ttys this might block the process for a considerable
+ * time. If this poses a problem, consider using StreamLogger instead:
+ *
+ * ```
+ * new StreamLogger(fs.createWriteStream('/my/file'))
+ * ```
+ *
+ * or
+ *
+ * ```
+ * new StreamLogger(fs.createWriteStream(null, { fd: myFd }));
+ * ```
  *
  * @class
  * @extends StreamLogger
  * @implements Logger
- * @param {String} name - The name of the file to log to
+ * @param {String|Integer} name - The path of the file to log to
+ *   OR the unix file descriptor to log to.
  * @param {Object} opts – Configuration object
  *
  *   - `level`: Default `info`; The minimum log level to sent to loggly
@@ -505,10 +523,50 @@ class StreamLogger {
  *
  *   All other options are forwarded to the formatter.
  */
-class FileLogger extends StreamLogger {
+class FileLogger {
+  /**
+   * The underlying operating system file descriptor.
+   * @member {Integer} fd
+   */
+
+  /**
+   * The minimum log level for messages to be printed.
+   * Feel free to change to one of the available levels.
+   * @member {string} level
+   */
+
+  /**
+   * Formatter used to format all the messages.
+   * Must yield an object suitable for passing to JSON.serialize
+   * Feel free to mutate or exchange.
+   * @member {Function} formatter
+   */
+
+  /**
+   * Options that will be passed to the formatter;
+   * Feel free to mutate or exchange.
+   * @member {object} fmtOpts
+   */
+
   constructor(name, opts = {}) {
-    super(createWriteStream(name, { flags: 'a' }), opts);
-    this.stream.on('error', e => error(`Error writing to file ${name}:`, e));
+    const { level = 'info', formatter = messageFormatTechnical, ...fmtOpts } = opts;
+    const fd = type(name) === Number ? name : openSync(name, 'a');
+    assign(this, {
+      fd, level, formatter, fmtOpts,
+    });
+  }
+
+  log(msg, opts = {}) {
+    const { level = 'info' } = opts || {};
+    if (numericLogLevel(level) > numericLogLevel(this.level)) {
+      return;
+    }
+
+    writeSync(this.fd, `${this.formatter(msg, { ...this.fmtOpts, level })}\n`);
+  }
+
+  close() {
+    closeSync(this.fd);
   }
 }
 /**
@@ -532,7 +590,7 @@ class MemLogger {
 
   /**
    * The minimum log level for messages to be printed.
-   * Feel free to change to one of the available levels.
+   * Feel free to change to one of the available levelsformatter
    * @member {string} level
    */
 
