@@ -93,7 +93,7 @@ const tryInspect = (what, opts) => {
   // this
   exec(async () => {
     if (!opts.recursiveErrorHandling && errors.length > 0) {
-      await new Promise(res => setImmediate(res));
+      await new Promise((res) => setImmediate(res));
       for (const e of errors) {
         const ser = tryInspect(e, { ...opts, recursiveErrorHandling: true });
         error(`Error while inspecting object for log message: ${ser}`);
@@ -121,7 +121,7 @@ const tryInspect = (what, opts) => {
  *   By default `{depth: null, breakLength: Infinity, colors: false}` is used.
  * @returns {string}
  */
-const serializeMessage = (msg, opts) => msg.map(v => (typeof (v) === 'string' ? v : tryInspect(v, opts))).join(' ');
+const serializeMessage = (msg, opts) => msg.map((v) => (typeof (v) === 'string' ? v : tryInspect(v, opts))).join(' ');
 
 /**
  * Simple message format: Serializes the message and prefixes it with
@@ -425,7 +425,7 @@ class MultiLogger {
         if (msg[0] !== metaErr) {
           // Try actually logging the message before printing the errors
           // at least for loggers that are not async
-          await new Promise(res => setImmediate(res));
+          await new Promise((res) => setImmediate(res));
           // Defensive coding: Not printing the message here because the message
           // may have triggered the exception…
           error(metaErr, name, '-', sub, ': ', err);

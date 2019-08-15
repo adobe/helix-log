@@ -37,7 +37,7 @@ const {
  * @param {any} what The object to convert
  * @returns {any} Json compatible object
  */
-const jsonifyForLog = what => JsonifyForLog.invoke(what);
+const jsonifyForLog = (what) => JsonifyForLog.invoke(what);
 
 /**
  * Trait used to serialize json objects to json. See jsonifyForLog.
@@ -47,22 +47,22 @@ JsonifyForLog.impl(String, identity);
 JsonifyForLog.impl(Number, identity);
 JsonifyForLog.impl(Boolean, identity);
 JsonifyForLog.impl(null, identity);
-JsonifyForLog.impl(Object, what => obj(map(what, map(jsonifyForLog))));
-JsonifyForLog.impl(Array, what => list(map(what, jsonifyForLog)));
-JsonifyForLog.impl(Date, what => what.toJSON());
-JsonifyForLog.impl(URL, what => what.toString());
-JsonifyForLog.impl(Map, what => ({
+JsonifyForLog.impl(Object, (what) => obj(map(what, map(jsonifyForLog))));
+JsonifyForLog.impl(Array, (what) => list(map(what, jsonifyForLog)));
+JsonifyForLog.impl(Date, (what) => what.toJSON());
+JsonifyForLog.impl(URL, (what) => what.toString());
+JsonifyForLog.impl(Map, (what) => ({
   $type: 'Map',
-  values: list(map(what, inn => list(map(inn, jsonifyForLog)))),
+  values: list(map(what, (inn) => list(map(inn, jsonifyForLog)))),
 }));
-JsonifyForLog.impl(Set, what => ({
+JsonifyForLog.impl(Set, (what) => ({
   $type: 'Set',
   values: list(map(what, jsonifyForLog)),
 }));
 JsonifyForLog.implWild((wild) => {
   // issubclass
   if (isdef(wild) && (wild.prototype instanceof Error || wild === Error)) {
-    return what => ({
+    return (what) => ({
       $type: typename(type(what)),
       name: what.name,
       message: what.message,
