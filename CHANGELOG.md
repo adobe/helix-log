@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/adobe/helix-log/compare/v1.1.0...v1.1.1) (2019-08-16)
+
+
+### Bug Fixes
+
+* **npm:** ignore not needed files ([2b5eb56](https://github.com/adobe/helix-log/commit/2b5eb56))
+
 # 1.0.0 (2019-08-16)
 
 
