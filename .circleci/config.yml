@@ -66,12 +66,9 @@ workflows:
   build:
     jobs:
       - build
-      # the semantic-release jobs needs a $NPM_TOKEN environment to be setup and also have a
-      # valid SSH_KEY added for the `github.com` host.
       - semantic-release:
           requires:
             - build
           filters:
             branches:
-              # rename to `master` once $NPM_TOKEN and github.com ssh key is setup.
-              only: master_disabled
+              only: master
