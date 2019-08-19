@@ -72,13 +72,13 @@ it('tryInspect', async () => {
     // Wait a couple of ticks so we can be sure all the error messages
     // where printed
     for (let i = 0; i < 20; i += 1) {
-      await new Promise(res => setImmediate(res));
+      await new Promise((res) => setImmediate(res));
     }
   });
 
   const filteredLogs = pipe(
     logs.split('\n'),
-    filter(line => line.startsWith('[ERROR]')),
+    filter((line) => line.startsWith('[ERROR]')),
     join('\n'),
   );
 
@@ -315,15 +315,15 @@ it('MultiLogger', async () => {
     // Wait a couple of ticks so we can be sure all the error messages
     // where printed
     for (let i = 0; i < 10; i += 1) {
-      await new Promise(res => setTimeout(res, 1));
+      await new Promise((res) => setTimeout(res, 1));
     }
     rootLogger.loggers = backup;
   }
 
   const logs = pipe(
     (`${join(bar.buf, '\n')}\n`).split('\n'),
-    reject(line => line.match(/^\s/)),
-    map(line => `${line}\n`),
+    reject((line) => line.match(/^\s/)),
+    map((line) => `${line}\n`),
     join(''),
   );
 
@@ -379,9 +379,9 @@ it('recordLogs, assertLogs', () => {
 it('recordAsyncLogs, assertAsyncLogs', async () => {
   await assertAsyncLogs(async () => {
     info('Hello World');
-    await new Promise(res => setImmediate(res));
+    await new Promise((res) => setImmediate(res));
     verbose('Foo');
-    await new Promise(res => setImmediate(res));
+    await new Promise((res) => setImmediate(res));
     error('Bar');
   },
   '[INFO] Hello World\n'
@@ -390,18 +390,18 @@ it('recordAsyncLogs, assertAsyncLogs', async () => {
 
   await assertAsyncLogs({ level: 'warn' }, async () => {
     info('Hello World');
-    await new Promise(res => setImmediate(res));
+    await new Promise((res) => setImmediate(res));
     verbose('Foo');
-    await new Promise(res => setImmediate(res));
+    await new Promise((res) => setImmediate(res));
     error('Bar');
   }, '[ERROR] Bar\n');
   assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
 
   const logs = await recordAsyncLogs(async () => {
     info('Hello World');
-    await new Promise(res => setImmediate(res));
+    await new Promise((res) => setImmediate(res));
     verbose('Foo');
-    await new Promise(res => setImmediate(res));
+    await new Promise((res) => setImmediate(res));
     error('Bar');
   });
   assert.strictEqual(logs,

@@ -51,7 +51,8 @@ const listen = async (server, port) => {
     server.server = http.createServer();
   }
 
-  let listeningHandler, errorHandler;
+  let listeningHandler;
+  let errorHandler;
   try {
     // So, unfortunately the listen() function is pretty fucked up it seems;
     // this is not the fault of polka: The http server's listen function should
@@ -120,7 +121,8 @@ const listenRandomPort = async (server) => {
  * @returns {Promise<>} Resolves when the server is really closed
  */
 const stop = async (server) => {
-  let closeHandler, errHandler;
+  let closeHandler;
+  let errHandler;
   try {
     const onClose = new Promise((res, rej) => {
       server.server.on('error', rej);
@@ -146,9 +148,9 @@ const stop = async (server) => {
  * @param {ReadableStream} stream
  * @returns {Promise<String>}
  */
-const readAll = stream => new Promise((res, rej) => {
+const readAll = (stream) => new Promise((res, rej) => {
   const buf = [];
-  stream.on('data', dat => buf.push(dat));
+  stream.on('data', (dat) => buf.push(dat));
   stream.on('end', () => res(join(buf, '')));
   stream.on('error', rej);
 });

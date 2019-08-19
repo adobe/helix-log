@@ -42,7 +42,7 @@ class MockLogglyServer {
     this.requestHandlerQ = [];
     this.requestQ = [];
 
-    post(this.server, '/inputs/:token/tag/http', async (req, _) => {
+    post(this.server, '/inputs/:token/tag/http', async (req) => {
       const dat = { body: await readAll(req), token: req.params.token };
       if (empty(this.requestHandlerQ)) {
         this.requestQ.push(dat);
@@ -55,7 +55,7 @@ class MockLogglyServer {
   nextReq() {
     assert(!this.stopped);
     if (empty(this.requestQ)) {
-      return new Promise(res => this.requestHandlerQ.push(res));
+      return new Promise((res) => this.requestHandlerQ.push(res));
     } else {
       return Promise.resolve(this.requestQ.pop());
     }
