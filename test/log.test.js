@@ -29,7 +29,7 @@ const {
   numericLogLevel, serializeMessage, ConsoleLogger,
   rootLogger, assertAsyncLogs, assertLogs, recordLogs, recordAsyncLogs,
   tryInspect, error, warn, info, verbose, debug, StreamLogger,
-  FileLogger, MemLogger, MultiLogger, log, messageFormatSimple,
+  FileLogger, MemLogger, MultiLogger, fatal, messageFormatSimple,
   messageFormatTechnical, messageFormatConsole, messageFormatJson,
 } = require('../src/log');
 const { ckEq } = require('./util');
@@ -235,7 +235,7 @@ const testLogger = (logger) => {
   try {
     rootLogger.loggers = dict({ default: logger });
 
-    log([{ foo: 23 }], { level: 'fatal' });
+    fatal({ foo: 23 });
     error();
     error(42);
     warn('Hello', 42, 'World');
