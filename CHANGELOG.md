@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/adobe/helix-log/compare/v1.1.2...v1.2.0) (2019-08-21)
+
+
+### Features
+
+* log() should be an alias to info() in order to be compatible with console. ([af8d51b](https://github.com/adobe/helix-log/commit/af8d51b))
+
 ## [1.1.1](https://github.com/adobe/helix-log/compare/v1.1.0...v1.1.1) (2019-08-16)
 
 
