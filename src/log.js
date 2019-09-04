@@ -436,7 +436,11 @@ class MultiLogger {
 }
 
 /**
- * Logs to any writable node.js stream
+ * Logs to any writable node.js stream.
+ *
+ * Note that this is the *only* logger that does not guarantee log delivery if
+ * process.abort or process.exit are called. Consider using FileLogger if you can
+ * get access to the file descriptor.
  *
  * @class
  * @implements Logger

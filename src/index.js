@@ -10,16 +10,16 @@
  * governing permissions and limitations under the License.
  */
 
+/* eslint-disable global-require */
+
 const { readFileSync } = require('fs');
 const { exec, isdef } = require('ferrum');
 
 module.exports = {
-  // eslint-disable-next-line global-require
   ...require('./log'),
-  // eslint-disable-next-line global-require
   ...require('./serialize-json'),
-  // eslint-disable-next-line global-require
-  ...require('./loggly'),
+  ...require('./coralogix'),
+  ...require('./logdna'),
 };
 
 // Make this repo a singleton.
