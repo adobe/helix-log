@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/adobe/helix-log/compare/v1.2.0...v1.3.0) (2019-09-10)
+
+
+### Features
+
+* Switch from loggly to coralogix+logdna ([1e409cc](https://github.com/adobe/helix-log/commit/1e409cc))
+
 # [1.2.0](https://github.com/adobe/helix-log/compare/v1.1.2...v1.2.0) (2019-08-21)
 
 
