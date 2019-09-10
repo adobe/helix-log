@@ -100,11 +100,16 @@ class CoralogixLogger {
    * @member {String} host
    */
 
+  /* istanbul ignore next */
   constructor(apikey, app, subsystem, opts = {}) {
     const {
+      /* istanbul ignore next */
       level = 'silly',
+      /* istanbul ignore next */
       formatter = messageFormatJson,
+      /* istanbul ignore next */
       host = hostname(),
+      /* istanbul ignore next */
       apiurl = 'https://api.coralogix.com/api/v1/',
       ...fmtOpts
     } = opts;
@@ -113,7 +118,9 @@ class CoralogixLogger {
     });
   }
 
+  /* istanbul ignore next */
   log(msg, opts = {}) {
+    /* istanbul ignore next */
     const { level = 'info' } = opts || {};
     if (numericLogLevel(level) > numericLogLevel(this.level)) {
       return;

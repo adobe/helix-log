@@ -84,7 +84,7 @@ it('CoralogixLogger', async () => {
 
     const logger = new CoralogixLogger(apikey, app, subsystem, {
       apiurl: `http://localhost:${server.port}/`,
-      level: 'info'
+      level: 'info',
     });
 
     const t0 = new Date().getTime();

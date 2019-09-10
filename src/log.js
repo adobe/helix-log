@@ -136,6 +136,7 @@ const serializeMessage = (msg, opts) => msg.map((v) => (typeof (v) === 'string' 
  *   - level: one of the log levels; this parameter is required.
  */
 const messageFormatSimple = (msg, opts) => {
+  /* istanbul ignore next */
   const { level = 'info', ...serialzeOpts } = opts || {};
   return `[${level.toUpperCase()}] ${serializeMessage(msg, serialzeOpts)}`;
 };
@@ -152,6 +153,7 @@ const messageFormatSimple = (msg, opts) => {
  *   - level: one of the log levels; this parameter is required.
  */
 const messageFormatTechnical = (msg, opts) => {
+  /* istanbul ignore next */
   const { level = 'info', ...serialzeOpts } = opts || {};
   const digit = (v, n) => {
     const num = String(v);
@@ -160,6 +162,7 @@ const messageFormatTechnical = (msg, opts) => {
   };
   const d = new Date();
   const tz = d.getTimezoneOffset();
+  /* istanbul ignore next */
   const pref = [ // [LEVEL YYYY-MM-DD hh:mm:ss.millis +tzh:tzm]
     level.toUpperCase(),
     `${d.getFullYear()}-${digit(d.getMonth(), 2)}-${digit(d.getDay(), 2)}`,
@@ -180,6 +183,7 @@ const messageFormatTechnical = (msg, opts) => {
  *   - level: one of the log levels; this parameter is required.
  */
 const messageFormatConsole = (msg, opts) => {
+  /* istanbul ignore next */
   const { level = 'info', ...serialzeOpts } = opts || {};
 
   const ser = serializeMessage(msg, { colors: true, ...serialzeOpts });
@@ -242,11 +246,13 @@ const messageFormatConsole = (msg, opts) => {
  *   - level: one of the log levels; this parameter is required.
  */
 const messageFormatJson = (msg, opts) => {
+  /* istanbul ignore next */
   const { level = 'info', ...serialzeOpts } = opts || {};
 
   let data = {};
 
   const setReserved = (name, val) => {
+    /* istanbul ignore next */
     if (name in data) {
       error("Can't log the", name, 'field using the json formatter. It is a reserved field!');
     }
@@ -268,6 +274,7 @@ const messageFormatJson = (msg, opts) => {
       lst = jsonifyForLog(lst);
     } catch (er) {
       lst = undefined;
+      /* istanbul ignore next */
       if (!(er instanceof TraitNotImplemented)) {
         throw er;
       }
@@ -353,14 +360,18 @@ class ConsoleLogger {
    * @member {object} fmtOpts
    */
 
+  /* istanbul ignore next */
   constructor(opts = {}) {
+    /* istanbul ignore next */
     const { level = 'info', formatter = messageFormatConsole, ...fmtOpts } = opts;
     assign(this, { level, formatter, fmtOpts });
   }
 
+  /* istanbul ignore next */
   log(msg, opts = {}) {
     // Defensive coding: Putting the entire function in try-catch
     // clauses to avoid any sorts of exceptions leaking
+    /* istanbul ignore next */
     const { level = 'info' } = opts || {};
     if (numericLogLevel(level) <= numericLogLevel(this.level)) {
       // Logs should go to stderr; this is only correct in node;
@@ -413,6 +424,7 @@ class MultiLogger {
     this.loggers = dict(loggers);
   }
 
+  /* istanbul ignore next */
   log(msg, opts = undefined) {
     each(this.loggers, async ([name, sub]) => {
       // We wrap each logging in separate try/catch blocks so exceptions
@@ -477,14 +489,18 @@ class StreamLogger {
    * @member {object} fmtOpts
    */
 
+  /* istanbul ignore next */
   constructor(stream, opts = {}) {
+    /* istanbul ignore next */
     const { level = 'info', formatter = messageFormatTechnical, ...fmtOpts } = opts;
     assign(this, {
       stream, level, formatter, fmtOpts,
     });
   }
 
+  /* istanbul ignore next */
   log(msg, opts = {}) {
+    /* istanbul ignore next */
     const { level = 'info' } = opts || {};
     if (numericLogLevel(level) > numericLogLevel(this.level)) {
       return;
@@ -552,7 +568,9 @@ class FileLogger {
    * @member {object} fmtOpts
    */
 
+  /* istanbul ignore next */
   constructor(name, opts = {}) {
+    /* istanbul ignore next */
     const { level = 'info', formatter = messageFormatTechnical, ...fmtOpts } = opts;
     const fd = type(name) === Number ? name : openSync(name, 'a');
     assign(this, {
@@ -560,7 +578,9 @@ class FileLogger {
     });
   }
 
+  /* istanbul ignore next */
   log(msg, opts = {}) {
+    /* istanbul ignore next */
     const { level = 'info' } = opts || {};
     if (numericLogLevel(level) > numericLogLevel(this.level)) {
       return;
@@ -611,14 +631,18 @@ class MemLogger {
    * @member {object} fmtOpts
    */
 
+  /* istanbul ignore next */
   constructor(opts = {}) {
+    /* istanbul ignore next */
     const { level = 'info', formatter = messageFormatSimple, ...fmtOpts } = opts;
     assign(this, {
       level, formatter, fmtOpts, buf: [],
     });
   }
 
+  /* istanbul ignore next */
   log(msg, opts = {}) {
+    /* istanbul ignore next */
     const { level = 'info' } = opts || {};
     if (numericLogLevel(level) <= numericLogLevel(this.level)) {
       this.buf.push(this.formatter(msg, { ...this.fmtOpts, level }));

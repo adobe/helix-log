@@ -90,7 +90,7 @@ it('LogdnaLogger', async () => {
 
     const logger = new LogdnaLogger(apikey, app, file, {
       apiurl: `http://localhost:${server.port}/`,
-      level: 'info'
+      level: 'warn',
     });
 
     const t0 = new Date().getTime();
