@@ -67,6 +67,7 @@ describe('serialize-json', () => {
       name: 'Error',
       message: 'Hello World',
       stack: flatInp.zeta.stack,
+      code: undefined,
     },
   };
 

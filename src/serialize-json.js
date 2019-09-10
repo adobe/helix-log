@@ -67,6 +67,7 @@ JsonifyForLog.implWild((wild) => {
       name: what.name,
       message: what.message,
       stack: what.stack,
+      code: what.code,
     });
   }
   return undefined;

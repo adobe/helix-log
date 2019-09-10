@@ -171,6 +171,27 @@ it('messageFormatJson', () => {
     message: '42',
     level: 'error',
   });
+
+  class Foo {}
+  ck('error', ['Foo', new Foo()], {
+    message: 'Foo Foo {}',
+    level: 'error',
+  });
+
+  const ex = new Error('Hello World');
+  ex.stack = 'Not a stack';
+  ex.code = 42;
+  ck('error', ['Wubalubadubdub', ex], {
+    message: 'Wubalubadubdub',
+    level: 'error',
+    exception: {
+      $type: 'Error',
+      name: 'Error',
+      message: 'Hello World',
+      stack: 'Not a stack',
+      code: 42,
+    },
+  });
 });
 
 class StringStream extends stream.Writable {

@@ -18,6 +18,7 @@ const phin = require('phin');
 const { iter } = require('ferrum');
 const { numericLogLevel, messageFormatJson } = require('./log');
 
+/* istanbul ignore next */
 const _makeUrl = (url, opts) => {
   const o = new URL(url);
   for (const [k, v] of iter(opts)) {
@@ -99,11 +100,16 @@ class LogdnaLogger {
    * @member {String} apiurl
    */
 
+  /* istanbul ignore next */
   constructor(apikey, app, file, opts = {}) {
     const {
+      /* istanbul ignore next */
       level = 'silly',
+      /* istanbul ignore next */
       formatter = messageFormatJson,
+      /* istanbul ignore next */
       host = hostname(),
+      /* istanbul ignore next */
       apiurl = 'https://logs.logdna.com/',
       ...fmtOpts
     } = opts;
@@ -112,7 +118,9 @@ class LogdnaLogger {
     });
   }
 
+  /* istanbul ignore next */
   log(msg, opts = {}) {
+    /* istanbul ignore next */
     const { level = 'info' } = opts || {};
     if (numericLogLevel(level) > numericLogLevel(this.level)) {
       return;
