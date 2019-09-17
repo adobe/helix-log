@@ -28,7 +28,7 @@ const {
 const {
   numericLogLevel, serializeMessage, ConsoleLogger,
   rootLogger, assertAsyncLogs, assertLogs, recordLogs, recordAsyncLogs,
-  tryInspect, error, warn, info, verbose, debug, StreamLogger,
+  tryInspect, error, warn, info, verbose, debug,
   FileLogger, MemLogger, MultiLogger, fatal, messageFormatSimple,
   messageFormatTechnical, messageFormatConsole, messageFormatJson,
 } = require('../src/log');
@@ -274,16 +274,6 @@ it('ConsoleLogger', async () => {
 
   out = await recordStderr(() => testLogger(new ConsoleLogger({ level: 'fatal' })));
   assert.strictEqual(out, logOutputFatalConsole);
-});
-
-it('StreamLogger', () => {
-  const ss = new StringStream();
-
-  testLogger(new StreamLogger(ss, { level: 'debug', formatter: messageFormatSimple }));
-  assert.strictEqual(ss.extract(), logOutputSimple);
-
-  testLogger(new StreamLogger(ss, { level: 'fatal' }));
-  assert(ss.extract().match(/^\[FATAL \d{4}-\d\d-\d\d \d\d:\d\d:\d\d.\d+ [+-]\d\d:\d\d\] \{ foo: 23 \}\n$/));
 });
 
 it('FileLogger', async () => {
