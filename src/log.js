@@ -146,7 +146,7 @@ const messageFormatSimple = (msg, opts) => {
 /**
  * Message format that includes extra information; prefixes each messagej
  *
- * This is used by FileLogger and StreamLogger by default for instance because if you
+ * This is used by FileLogger by default for instance because if you
  * work with many log files you need that sort of info.
  *
  * @param {any[]} msg – Parameters as you would pass them to console.log
@@ -450,70 +450,6 @@ class MultiLogger {
 }
 
 /**
- * Logs to any writable node.js stream.
- *
- * Note that this is the *only* logger that does not guarantee log delivery if
- * process.abort or process.exit are called. Consider using FileLogger if you can
- * get access to the file descriptor.
- *
- * @class
- * @implements Logger
- * @param {WritableStream} stream - The stream to log to
- * @param {Object} opts – Configuration object
- *
- *   - `level`: Default `info`; The minimum log level to sent to loggly
- *   - `formatter`: Default `messageFormatTechinal`; A formatter producing strings
- *
- *   All other options are forwarded to the formatter.
- */
-class StreamLogger {
-  /**
-   * The stream this logs to.
-   * @member {Object} stream
-   */
-
-  /**
-   * The minimum log level for messages to be printed.
-   * Feel free to change to one of the available levels.
-   * @member {string} level
-   */
-
-  /**
-   * Formatter used to format all the messages.
-   * Must yield an object suitable for passing to JSON.serialize
-   * Feel free to mutate or exchange.
-   * @member {Function} formatter
-   */
-
-  /**
-   * Options that will be passed to the formatter;
-   * Feel free to mutate or exchange.
-   * @member {object} fmtOpts
-   */
-
-  /* istanbul ignore next */
-  constructor(stream, opts = {}) {
-    /* istanbul ignore next */
-    const { level = 'info', formatter = messageFormatTechnical, ...fmtOpts } = opts;
-    assign(this, {
-      stream, level, formatter, fmtOpts,
-    });
-  }
-
-  /* istanbul ignore next */
-  log(msg, opts = {}) {
-    /* istanbul ignore next */
-    const { level = 'info' } = opts || {};
-    if (numericLogLevel(level) > numericLogLevel(this.level)) {
-      return;
-    }
-
-    this.stream.write(this.formatter(msg, { ...this.fmtOpts, level }));
-    this.stream.write('\n');
-  }
-}
-
-/**
  * Logger specifically designed for logging to unix file descriptors.
  *
  * This logger is synchronous: It uses blocking syscalls and thus guarantees
@@ -521,20 +457,9 @@ class StreamLogger {
  * logging.
  * For normal files this is not a problem as linux will never block when writing
  * to files, for sockets, pipes and ttys this might block the process for a considerable
- * time. If this poses a problem, consider using StreamLogger instead:
- *
- * ```
- * new StreamLogger(fs.createWriteStream('/my/file'))
- * ```
- *
- * or
- *
- * ```
- * new StreamLogger(fs.createWriteStream(null, { fd: myFd }));
- * ```
+ * time.
  *
  * @class
- * @extends StreamLogger
  * @implements Logger
  * @param {String|Integer} name - The path of the file to log to
  *   OR the unix file descriptor to log to.
@@ -889,7 +814,6 @@ module.exports = {
   messageFormatJson,
   ConsoleLogger,
   MultiLogger,
-  StreamLogger,
   FileLogger,
   MemLogger,
   rootLogger,
