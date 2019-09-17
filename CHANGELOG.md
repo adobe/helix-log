@@ -1,3 +1,27 @@
+# [2.0.0](https://github.com/adobe/helix-log/compare/v1.3.0...v2.0.0) (2019-09-17)
+
+
+### chore
+
+* Get rid of StreamLogger ([d80738b](https://github.com/adobe/helix-log/commit/d80738b))
+
+
+### Features
+
+* Introduce an adapter for bunyan ([bf4b469](https://github.com/adobe/helix-log/commit/bf4b469))
+
+
+### BREAKING CHANGES
+
+* Removes StreamLogger
+
+StreamLogger was not used and did not feature a proper timer
+based flushing mechanism, so using it required manually calling
+flush which is not user friendly.
+
+Should the need for such a logger arise again, it will be reintroduced
+together with proper automatic flushing.
+
 # [1.3.0](https://github.com/adobe/helix-log/compare/v1.2.0...v1.3.0) (2019-09-10)
 
 
