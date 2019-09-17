@@ -55,6 +55,8 @@ const numericLogLevel = (name) => {
   return r;
 };
 
+numericLogLevel._loglevelMap = _loglevelMap;
+
 /**
  * Wrapper around inspect that is extremely robust against errors
  * during inspection.

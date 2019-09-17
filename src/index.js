@@ -20,6 +20,7 @@ module.exports = {
   ...require('./serialize-json'),
   ...require('./coralogix'),
   ...require('./logdna'),
+  ...require('./bunyan'),
 };
 
 // Make this repo a singleton.
