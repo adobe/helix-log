@@ -30,10 +30,7 @@ const _makeUrl = (url, opts) => {
 /**
  * Sends log messages to the logdna logging service.
  *
- * Internally a sophisticated queueing is used to make sure we send the
- * log messages efficiently in bulk.
- *
- * This logger does not guarantee that all log messages are sent on exit() or abort().
+ * Log messages are sent immediately, but due to the use of HTTP
  *
  * ## Future Direction
  *
