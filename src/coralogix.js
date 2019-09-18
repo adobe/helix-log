@@ -30,12 +30,11 @@ const _logLevelMapping = {
 /**
  * Sends log messages to the coralogix logging service.
  *
- * Internally a sophisticated queueing is used to make sure we send the
- * log messages efficiently in bulk.
- *
- * This logger does not guarantee that all log messages are sent on exit() or abort().
+ * Log messages are sent immediately, but due to the use of HTTP
  *
  * ## Future Direction
+ *
+ * We may introduce batch processing of log messages to improve efficiency.
  *
  * For this sort of necessarily asynchronous logger, we could launch a second process
  * that acts as a proxy and won't crash even if the main node process encounters a fatal
