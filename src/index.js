@@ -12,8 +12,8 @@
 
 /* eslint-disable global-require */
 
-const { readFileSync } = require('fs');
 const { exec, isdef } = require('ferrum');
+const pkgJson = require('../package.json');
 
 module.exports = {
   ...require('./log'),
@@ -29,7 +29,7 @@ exec(() => {
   const key = 'helix-log-a8b81455-7074-4953-a769-82754b0eb756';
   const me = {
     module,
-    package: JSON.parse(readFileSync(`${__dirname}/../package.json`, { encoding: 'utf-8' })),
+    package: pkgJson,
   };
 
   const subst = global[key];
