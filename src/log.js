@@ -107,6 +107,12 @@ const tryInspect = (what, opts) => {
 };
 
 /**
+ * @callback MessageFormatter
+ * @param {[]} msg – Parameters as you would pass them to console.log
+ * @param {Object} opts – Formatting options.
+ */
+
+/**
  * This is a useful helper function that turns a message containing
  * arbitrary objects (like you would hand to console.log) into a string.
  *
@@ -118,6 +124,7 @@ const tryInspect = (what, opts) => {
  * console.warn/log/error should be used as these enable the use of the
  * visual object inspectors, at least in chrome and firefox.
  *
+ * @type MessageFormatter
  * @param {any[]} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to util.inspect().
  *   By default `{depth: null, breakLength: Infinity, colors: false}` is used.
@@ -132,6 +139,7 @@ const serializeMessage = (msg, opts) => msg.map((v) => (typeof (v) === 'string' 
  * This is used by the MemLogger by default for instance, because it is relatively
  * easy to test with and contains no extra info.
  *
+ * @type MessageFormatter
  * @param {any[]} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
  *
@@ -149,6 +157,7 @@ const messageFormatSimple = (msg, opts) => {
  * This is used by FileLogger by default for instance because if you
  * work with many log files you need that sort of info.
  *
+ * @type MessageFormatter
  * @param {any[]} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
  *
@@ -179,6 +188,7 @@ const messageFormatTechnical = (msg, opts) => {
  *
  * Designed for use in terminals.
  *
+ * @type MessageFormatter
  * @param {any[]} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
  *
@@ -242,6 +252,7 @@ const messageFormatConsole = (msg, opts) => {
  * If the last object is an exception, it will be sent as { exception: $exception };
  * this serves to facilitate searching for exceptions explicitly.
  *
+ * @type MessageFormatter
  * @param {any[]} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
  *
@@ -353,7 +364,7 @@ class ConsoleLogger {
    * Formatter used to format all the messages.
    * Must yield an object suitable for passing to JSON.serialize
    * Feel free to mutate or exchange.
-   * @member {Function} formatter
+   * @member {MessageFormatter} formatter
    */
 
   /**
@@ -486,7 +497,7 @@ class FileLogger {
    * Formatter used to format all the messages.
    * Must yield an object suitable for passing to JSON.serialize
    * Feel free to mutate or exchange.
-   * @member {Function} formatter
+   * @member {MessageFormatter} formatter
    */
 
   /**
@@ -549,7 +560,7 @@ class MemLogger {
    * Formatter used to format all the messages.
    * Must yield an object suitable for passing to JSON.serialize
    * Feel free to mutate or exchange.
-   * @member {Function} formatter
+   * @member {MessageFormatter} formatter
    */
 
   /**
