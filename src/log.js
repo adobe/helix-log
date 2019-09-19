@@ -619,60 +619,60 @@ const logWithOpts = (msg, opts) => {
 /**
  * Uses the currently installed logger to print a fatal error-message
  * @function
- * @param {...Any} ...msg – The message as you would hand it to console.log
+ * @param {...*} msg – The message as you would hand it to console.log
  */
 const fatal = (...msg) => logWithOpts(msg, { level: 'fatal' });
 
 /**
  * Uses the currently installed logger to print an error-message
  * @function
- * @param {...Any} ...msg – The message as you would hand it to console.log
+ * @param {...*} msg – The message as you would hand it to console.log
  */
 const error = (...msg) => logWithOpts(msg, { level: 'error' });
 
 /**
- * Uses the currently installed logger to print an warn
+ * Uses the currently installed logger to print a warn message
  * @function
- * @param {...Any} ...msg – The message as you would hand it to console.log
+ * @param {...*} msg – The message as you would hand it to console.log
  */
 const warn = (...msg) => logWithOpts(msg, { level: 'warn' });
 
 /**
  * Uses the currently installed logger to print an informational message
  * @function
- * @param {...Any} ...msg – The message as you would hand it to console.log
+ * @param {...*} msg – The message as you would hand it to console.log
  * @alias log
  */
-const info = (...msg) => logWithOpts(msg, { level: 'info' }, ...msg);
+const info = (...msg) => logWithOpts(msg, { level: 'info' });
 const log = info;
 
 /**
  * Uses the currently installed logger to print a verbose message
  * @function
- * @param {...Any} ...msg – The message as you would hand it to console.log
+ * @param {...*} msg – The message as you would hand it to console.log
  */
-const verbose = (...msg) => logWithOpts(msg, { level: 'verbose' }, ...msg);
+const verbose = (...msg) => logWithOpts(msg, { level: 'verbose' });
 
 /**
  * Uses the currently installed logger to print a message intended for debugging
  * @function
- * @param {...Any} ...msg – The message as you would hand it to console.log
+ * @param {...*} msg – The message as you would hand it to console.log
  */
 const debug = (...msg) => logWithOpts(msg, { level: 'debug' });
 
 /**
  * Uses the currently installed logger to print a trace level message
  * @function
- * @param {...Any} ...msg – The message as you would hand it to console.log
+ * @param {...*} msg – The message as you would hand it to console.log
  */
-const trace = (...msg) => logWithOpts(msg, { level: 'trace' }, ...msg);
+const trace = (...msg) => logWithOpts(msg, { level: 'trace' });
 
 /**
  * Uses the currently installed logger to print a silly level message
  * @function
- * @param {...Any} ...msg – The message as you would hand it to console.log
+ * @param {...*} msg – The message as you would hand it to console.log
  */
-const silly = (...msg) => logWithOpts(msg, { level: 'silly' }, ...msg);
+const silly = (...msg) => logWithOpts(msg, { level: 'silly' });
 
 /**
  * Record the log files with debug granularity while the given function is running.
