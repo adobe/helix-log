@@ -107,6 +107,12 @@ const tryInspect = (what, opts) => {
 };
 
 /**
+ * @callback MessageFormatter
+ * @param {[]} msg – Parameters as you would pass them to console.log
+ * @param {Object} opts – Formatting options.
+ */
+
+/**
  * This is a useful helper function that turns a message containing
  * arbitrary objects (like you would hand to console.log) into a string.
  *
@@ -118,6 +124,7 @@ const tryInspect = (what, opts) => {
  * console.warn/log/error should be used as these enable the use of the
  * visual object inspectors, at least in chrome and firefox.
  *
+ * @type MessageFormatter
  * @param {any[]} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to util.inspect().
  *   By default `{depth: null, breakLength: Infinity, colors: false}` is used.
@@ -132,6 +139,7 @@ const serializeMessage = (msg, opts) => msg.map((v) => (typeof (v) === 'string' 
  * This is used by the MemLogger by default for instance, because it is relatively
  * easy to test with and contains no extra info.
  *
+ * @type MessageFormatter
  * @param {any[]} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
  *
@@ -149,6 +157,7 @@ const messageFormatSimple = (msg, opts) => {
  * This is used by FileLogger by default for instance because if you
  * work with many log files you need that sort of info.
  *
+ * @type MessageFormatter
  * @param {any[]} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
  *
@@ -179,6 +188,7 @@ const messageFormatTechnical = (msg, opts) => {
  *
  * Designed for use in terminals.
  *
+ * @type MessageFormatter
  * @param {any[]} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
  *
@@ -242,6 +252,7 @@ const messageFormatConsole = (msg, opts) => {
  * If the last object is an exception, it will be sent as { exception: $exception };
  * this serves to facilitate searching for exceptions explicitly.
  *
+ * @type MessageFormatter
  * @param {any[]} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
  *
@@ -300,6 +311,51 @@ const messageFormatJson = (msg, opts) => {
 };
 
 /**
+ * Helper function that injects `process.env` variables into the message.
+ *
+ * @example This example shows how to automatically inject openwhisk specific process env variables
+ * using the coralogix logger:
+ *
+ * ```
+ * const logger = new CoralogixLogger(apiKey, applicationName, subsystemName, {
+ *   level: 'debug',
+ *   formatter: envInjectionJsonMessageAdapter({
+ *     ow: {
+ *       activationId: '__OW_ACTIVATION_ID',
+ *       actionName: '__OW_ACTION_NAME',
+ *     },
+ *   }, messageFormatJson),
+ * });
+ *
+ * rootLogger.loggers.set('coralogix', logger);
+ * ```
+ *
+ * @type MessageFormatter
+ * @param {Object} mapping - Mapping from log keys to environment variable names.
+ * @param {MessageFormatter} formatter - target message format.
+ * @returns {Object} the JSON data.
+ */
+const envInjectionJsonMessageAdapter = (mapping, formatter) => (msg, opts) => {
+  const augment = (target, map) => {
+    Object.entries(map).forEach(([key, value]) => {
+      if (typeof value === 'object') {
+        // eslint-disable-next-line no-param-reassign
+        target[key] = augment({}, value);
+      } else {
+        // eslint-disable-next-line no-param-reassign
+        target[key] = process.env[value];
+      }
+    });
+    return target;
+  };
+  const data = formatter(msg, opts);
+  if (type(data) === Object) {
+    augment(data, mapping);
+  }
+  return data;
+};
+
+/**
  *
  * Uses a fairly simple interface to avoid complexity for use cases in
  * which is not required. Can be used to dispatch logging to more
@@ -353,7 +409,7 @@ class ConsoleLogger {
    * Formatter used to format all the messages.
    * Must yield an object suitable for passing to JSON.serialize
    * Feel free to mutate or exchange.
-   * @member {Function} formatter
+   * @member {MessageFormatter} formatter
    */
 
   /**
@@ -486,7 +542,7 @@ class FileLogger {
    * Formatter used to format all the messages.
    * Must yield an object suitable for passing to JSON.serialize
    * Feel free to mutate or exchange.
-   * @member {Function} formatter
+   * @member {MessageFormatter} formatter
    */
 
   /**
@@ -549,7 +605,7 @@ class MemLogger {
    * Formatter used to format all the messages.
    * Must yield an object suitable for passing to JSON.serialize
    * Feel free to mutate or exchange.
-   * @member {Function} formatter
+   * @member {MessageFormatter} formatter
    */
 
   /**
@@ -812,6 +868,7 @@ module.exports = {
   messageFormatTechnical,
   messageFormatConsole,
   messageFormatJson,
+  envInjectionJsonMessageAdapter,
   ConsoleLogger,
   MultiLogger,
   FileLogger,

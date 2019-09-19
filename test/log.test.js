@@ -31,6 +31,7 @@ const {
   tryInspect, error, warn, info, verbose, debug,
   FileLogger, MemLogger, MultiLogger, fatal, messageFormatSimple,
   messageFormatTechnical, messageFormatConsole, messageFormatJson,
+  envInjectionJsonMessageAdapter,
 } = require('../src/log');
 const { ckEq } = require('./util');
 
@@ -192,6 +193,106 @@ it('messageFormatJson', () => {
       code: 42,
     },
   });
+});
+
+it('envInjectionJsonMessageAdapter', () => {
+  const ck = (level, msg, expect) => {
+    const formatter = envInjectionJsonMessageAdapter({
+      foo: 'HELIX_LOG_TEST_A',
+      sub: {
+        bar: 'HELIX_LOG_TEST_B',
+      },
+    }, messageFormatJson);
+
+    const gen = formatter(msg, { level });
+    assert(gen.timestamp instanceof Date);
+    delete gen.timestamp;
+    ckEq(gen, expect);
+  };
+
+  process.env.HELIX_LOG_TEST_A = 'foo';
+  process.env.HELIX_LOG_TEST_B = 'bar';
+
+  ck('error', ['Foo bar', { hello: 42 }], {
+    hello: 42,
+    message: 'Foo bar',
+    level: 'error',
+    foo: 'foo',
+    sub: {
+      bar: 'bar',
+    },
+  });
+
+  process.env.HELIX_LOG_TEST_A = 'zoo';
+  process.env.HELIX_LOG_TEST_B = 'zar';
+
+  ck('error', ['Foo bar', { hello: 42 }], {
+    hello: 42,
+    message: 'Foo bar',
+    level: 'error',
+    foo: 'zoo',
+    sub: {
+      bar: 'zar',
+    },
+  });
+
+  ck('error', [{ hello: 42 }], {
+    hello: 42,
+    level: 'error',
+    foo: 'zoo',
+    sub: {
+      bar: 'zar',
+    },
+  });
+
+  ck('error', ['Foo bar'], {
+    message: 'Foo bar',
+    level: 'error',
+    foo: 'zoo',
+    sub: {
+      bar: 'zar',
+    },
+  });
+
+  ck('error', [], {
+    level: 'error',
+    foo: 'zoo',
+    sub: {
+      bar: 'zar',
+    },
+  });
+
+  const ex = new Error('Hello World');
+  ex.stack = 'Not a stack';
+  ex.code = 42;
+  ck('error', ['Wubalubadubdub', ex], {
+    message: 'Wubalubadubdub',
+    level: 'error',
+    exception: {
+      $type: 'Error',
+      name: 'Error',
+      message: 'Hello World',
+      stack: 'Not a stack',
+      code: 42,
+    },
+    foo: 'zoo',
+    sub: {
+      bar: 'zar',
+    },
+  });
+
+  // check with non json formatter
+  const formatter = envInjectionJsonMessageAdapter({
+    foo: 'HELIX_LOG_TEST_A',
+    sub: {
+      bar: 'HELIX_LOG_TEST_B',
+    },
+  }, messageFormatSimple);
+
+  assert.strictEqual(
+    formatter(['Hello', 42, 'World'], { level: 'error' }),
+    '[ERROR] Hello 42 World',
+  );
 });
 
 class StringStream extends stream.Writable {
