@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/adobe/helix-log/compare/v2.0.0...v2.0.1) (2019-09-20)
+
+
+### Bug Fixes
+
+* **log:** avoid error when using helix-log in a (web)package ([8b050cf](https://github.com/adobe/helix-log/commit/8b050cf)), closes [#31](https://github.com/adobe/helix-log/issues/31)
+
 # [2.0.0](https://github.com/adobe/helix-log/compare/v1.3.0...v2.0.0) (2019-09-17)
 
 
