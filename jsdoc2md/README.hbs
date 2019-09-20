@@ -1,0 +1,45 @@
+# Helix Log Framework
+
+Logging framework used within the helix project.
+
+## Status
+
+[![codecov](https://img.shields.io/codecov/c/github/adobe/helix-log.svg)](https://codecov.io/gh/adobe/helix-log)
+[![CircleCI](https://img.shields.io/circleci/project/github/adobe/helix-log.svg)](https://circleci.com/gh/adobe/helix-log)
+[![GitHub license](https://img.shields.io/github/license/adobe/helix-log.svg)](https://github.com/adobe/helix-log/blob/master/LICENSE.txt)
+[![GitHub issues](https://img.shields.io/github/issues/adobe/helix-log.svg)](https://github.com/adobe/helix-log/issues)
+[![LGTM Code Quality Grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/adobe/helix-log.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/adobe/helix-log)
+
+## Development
+
+
+### Build
+
+```bash
+npm install
+```
+
+### Test
+
+```bash
+npm test
+```
+
+### Lint
+
+```bash
+npm run lint
+```
+
+# Usage
+
+```
+const { info, error } = require('@adobe/helix-log');
+
+info('This is an info level message ', { foo: 42 }, '; dumping any javascript variable like console.log is supported');
+error('You can log exceptions like this', new Error('This is a problem'));
+```
+
+
+# API Reference
+{{>main~}}

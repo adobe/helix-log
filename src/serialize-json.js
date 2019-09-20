@@ -34,8 +34,8 @@ const {
  * @function
  * @throws TraitNotImplemented If any object in the given object tree
  *   can not be converted to json-compatible
- * @param {any} what The object to convert
- * @returns {any} Json compatible object
+ * @param {*} what The object to convert
+ * @returns {*} Json compatible object
  */
 const jsonifyForLog = (what) => JsonifyForLog.invoke(what);
 

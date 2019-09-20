@@ -27,11 +27,7 @@ const _logLevelMapping = {
   silly: 1,
 };
 
-/**
- * Sends log messages to the coralogix logging service.
- *
- * Log messages are sent immediately, but due to the use of HTTP
- *
+/*
  * ## Future Direction
  *
  * We may introduce batch processing of log messages to improve efficiency.
@@ -44,59 +40,67 @@ const _logLevelMapping = {
  * quick enough.
  * We could even use a journaling file/directory for communication so the other process could
  * even recover from a system crash...
+ */
+
+/**
+ * Sends log messages to the coralogix logging service.
  *
  * @class
  * @implements Logger
- * @param {String} apikey – Your coralogix api keyy
- * @param {String} app – Name of the app under which the log messages should be categorized
- * @param {String} subsystem – Name of the subsystem under which
+ * @param {string} apikey – Your coralogix api key
+ * @param {string} app – Name of the app under which the log messages should be categorized
+ * @param {string} subsystem – Name of the subsystem under which
  *   the log messages should be categorized
- * @param {Object} opts – Configuration object
- *
- *   - `level`: Default `silly`; The minimum log level to sent to coralogix
- *   - `formatter`: Default `messageFormatJson`; A formatter producing json
- *   - `host`: Default is the system hostname; The hostname under which to categorize the messages
- *   - `apiurl`: Default `https://api.coralogix.com/api/v1/`; where the coralogix api can be found; for testing; where the coralogix api can be found; for testing
- *
- *   All other options are forwarded to the formatter.
+ * @param {Object} opts – Configuration object. Options are also forwarded to the formatter
+ * @param {string} [opts.level=silly] The minimum log level to sent to coralogix
+ * @param {MessageFormatter} [opts.formatter=messageFormatJson] A formatter producing json
+ * @param {string} [opts.host=<system hostname>] The hostname under which to categorize the messages
+ * @param {string} [opts.apiurl=https://api.coralogix.com/api/v1/] where the coralogix api can be found
  */
 class CoralogixLogger {
   /**
    * The minimum log level for messages to be printed.
    * Feel free to change to one of the available levels.
+   * @memberOf CoralogixLogger#
    * @member {string} level
    */
 
   /**
    * Formatter used to format all the messages.
    * Must yield an object suitable for passing to JSON.serialize
-   * @member {Function} formatter
+   * @memberOf CoralogixLogger#
+   * @member {MessageFormatter} formatter
    */
 
   /**
    * Options that will be passed to the formatter;
    * Feel free to mutate or exchange.
+   * @memberOf CoralogixLogger#
    * @member {object} fmtOpts
    */
 
   /**
    * Name of the app under which the log messages should be categorized
-   * @member {String} apikey
+   * @memberOf CoralogixLogger#
+   * @member {string} apikey
    */
 
   /**
    * Name of the app under which the log messages should be categorized
-   * @member {String} app
+   * @memberOf CoralogixLogger#
+   * @member {string} app
    */
 
   /**
    * Name of the subsystem under which the log messages should be categorized
-   * @member {String} subsystem
+   * @memberOf CoralogixLogger#
+   * @member {string} subsystem
    */
 
   /**
    * The hostname under which to categorize the messages
-   * @member {String} host
+   * @memberOf CoralogixLogger#
+   * @member {string} host
    */
 
   /* istanbul ignore next */

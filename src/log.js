@@ -44,8 +44,8 @@ const _loglevelMap = {
  * numeric equivalent. More pressing log levels have lower numbers.
  *
  * @throws {Error} If the given log level name is invalid.
- * @param {String} name Name of the log level
- * @returns {Number} The numeric log level
+ * @param {string} name Name of the log level
+ * @returns {number} The numeric log level
  */
 const numericLogLevel = (name) => {
   const r = _loglevelMap[name];
@@ -67,7 +67,7 @@ numericLogLevel._loglevelMap = _loglevelMap;
  * If any error is encountered a less informative string than a full
  * inspect is returned and the error is logged using `err()`.
  *
- * @param {Any} what The object to inspect
+ * @param {*} what The object to inspect
  * @param {Object} opts Options will be passed through to inspect.
  *   Note that these may be ignored if there is an error during inspect().
  */
@@ -108,7 +108,7 @@ const tryInspect = (what, opts) => {
 
 /**
  * @callback MessageFormatter
- * @param {[]} msg – Parameters as you would pass them to console.log
+ * @param {Array} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Formatting options.
  */
 
@@ -125,7 +125,7 @@ const tryInspect = (what, opts) => {
  * visual object inspectors, at least in chrome and firefox.
  *
  * @type MessageFormatter
- * @param {any[]} msg – Parameters as you would pass them to console.log
+ * @param {Array} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to util.inspect().
  *   By default `{depth: null, breakLength: Infinity, colors: false}` is used.
  * @returns {string}
@@ -140,7 +140,7 @@ const serializeMessage = (msg, opts) => msg.map((v) => (typeof (v) === 'string' 
  * easy to test with and contains no extra info.
  *
  * @type MessageFormatter
- * @param {any[]} msg – Parameters as you would pass them to console.log
+ * @param {Array} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
  *
  *   - level: one of the log levels; this parameter is required.
@@ -158,7 +158,7 @@ const messageFormatSimple = (msg, opts) => {
  * work with many log files you need that sort of info.
  *
  * @type MessageFormatter
- * @param {any[]} msg – Parameters as you would pass them to console.log
+ * @param {Array} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
  *
  *   - level: one of the log levels; this parameter is required.
@@ -189,7 +189,7 @@ const messageFormatTechnical = (msg, opts) => {
  * Designed for use in terminals.
  *
  * @type MessageFormatter
- * @param {any[]} msg – Parameters as you would pass them to console.log
+ * @param {Array} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
  *
  *   - level: one of the log levels; this parameter is required.
@@ -253,7 +253,7 @@ const messageFormatConsole = (msg, opts) => {
  * this serves to facilitate searching for exceptions explicitly.
  *
  * @type MessageFormatter
- * @param {any[]} msg – Parameters as you would pass them to console.log
+ * @param {Array} msg – Parameters as you would pass them to console.log
  * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
  *
  *   - level: one of the log levels; this parameter is required.
@@ -331,32 +331,31 @@ const messageFormatJson = (msg, opts) => {
  * still catch any errors and handle them appropriately.
  *
  * @method
- * @name log
- * @param {any[]} msg The message; list of arguments as you would pass it to console.log
+ * @name Logger#log
+ * @param {Array} msg The message; list of arguments as you would pass it to console.log
  * @param {Object} opts – Configuration object; contains only one key at
  *   the moment: `level` - The log level which can be one of `error, warn,
  *   info, verbose` and `debug`.
  */
 
 /**
- * Logger that is especially designed to be used in node.js
+ * Logger that is especially designed to be used in node.js.
+ *
  * Print's to stderr; Marks errors, warns & debug messages
  * with a colored `[ERROR]`/... prefix. Uses `inspect` to display
  * all non-strings.
  *
  * @implements Logger
  * @class
- * @param {Object} opts – Configuration object
- *
- *   - `level`: Default `info`; The minimum log level to sent to loggly
- *   - `formatter`: Default `messageFormatConsole`; A formatter producing strings
- *
- *   All other options are forwarded to the formatter.
+ * @param {Object} opts – Configuration object. All other options are forwarded to the formatter.
+ * @param {string} [opts.level=info] The minimum log level
+ * @param {MessageFormatter} [opts.formatter=messageFormatConsole] A formatter producing strings
  */
 class ConsoleLogger {
   /**
    * The minimum log level for messages to be printed.
    * Feel free to change to one of the available levels.
+   * @memberOf ConsoleLogger#
    * @member {string} level
    */
 
@@ -364,12 +363,14 @@ class ConsoleLogger {
    * Formatter used to format all the messages.
    * Must yield an object suitable for passing to JSON.serialize
    * Feel free to mutate or exchange.
+   * @memberOf ConsoleLogger#
    * @member {MessageFormatter} formatter
    */
 
   /**
    * Options that will be passed to the formatter;
    * Feel free to mutate or exchange.
+   * @memberOf ConsoleLogger#
    * @member {object} fmtOpts
    */
 
@@ -401,6 +402,7 @@ class ConsoleLogger {
  * explicitly permitted to mutate this map or replace it all together in
  * order to add, remove or alter logger.
  *
+ * @example
  * ```js
  * const { rootLogger } = require('@adobe/helix-shared').log;
  *
@@ -423,13 +425,13 @@ class ConsoleLogger {
  *
  * @implements Logger
  * @class
- * @parameter {...Logger} ...loggers – The loggers to forward to.
  */
 class MultiLogger {
-  /*
+  /**
    * The list of loggers this is forwarding to. Feel free to mutate
    * or replace.
    *
+   * @memberOf MultiLogger#
    * @member {Map<Logger>} loggers
    */
 
@@ -472,24 +474,23 @@ class MultiLogger {
  *
  * @class
  * @implements Logger
- * @param {String|Integer} name - The path of the file to log to
+ * @param {string|number} name - The path of the file to log to
  *   OR the unix file descriptor to log to.
- * @param {Object} opts – Configuration object
- *
- *   - `level`: Default `info`; The minimum log level to sent to loggly
- *   - `formatter`: Default `messageFormatTechnical`; A formatter producing strings
- *
- *   All other options are forwarded to the formatter.
+ * @param {Object} opts – Configuration object. All other options are forwarded to the formatter.
+ * @param {string} [opts.level=info] The minimum log level
+ * @param {MessageFormatter} [opts.formatter=messageFormatTechnical] A formatter producing strings
  */
 class FileLogger {
   /**
    * The underlying operating system file descriptor.
-   * @member {Integer} fd
+   * @memberOf FileLogger#
+   * @member {number} fd
    */
 
   /**
    * The minimum log level for messages to be printed.
    * Feel free to change to one of the available levels.
+   * @memberOf FileLogger#
    * @member {string} level
    */
 
@@ -497,12 +498,14 @@ class FileLogger {
    * Formatter used to format all the messages.
    * Must yield an object suitable for passing to JSON.serialize
    * Feel free to mutate or exchange.
+   * @memberOf FileLogger#
    * @member {MessageFormatter} formatter
    */
 
   /**
    * Options that will be passed to the formatter;
    * Feel free to mutate or exchange.
+   * @memberOf FileLogger#
    * @member {object} fmtOpts
    */
 
@@ -531,28 +534,28 @@ class FileLogger {
     closeSync(this.fd);
   }
 }
+
 /**
  * Logs messages to an in-memory buffer.
  *
  * @class
  * @implements Logger
  * @class
- * @param {Object} opts – Configuration object
- *
- *   - `level`: Default `info`; The minimum log level to sent to loggly
- *   - `formatter`: Default `messageFormatSimple`; A formatter producing any format.
- *
- *   All other options are forwarded to the formatter.
+ * @param {Object} opts – Configuration object. All other options are forwarded to the formatter.
+ * @param {string} [opts.level=info] The minimum log level
+ * @param {MessageFormatter} [opts.formatter=messageFormatSimple] A formatter any format.
  */
 class MemLogger {
   /**
    * The buffer that stores all separate, formatted log messages.
+   * @memberOf MemLogger#
    * @member {Array} buf
    */
 
   /**
    * The minimum log level for messages to be printed.
    * Feel free to change to one of the available levelsformatter
+   * @memberOf MemLogger#
    * @member {string} level
    */
 
@@ -560,13 +563,15 @@ class MemLogger {
    * Formatter used to format all the messages.
    * Must yield an object suitable for passing to JSON.serialize
    * Feel free to mutate or exchange.
+   * @memberOf MemLogger#
    * @member {MessageFormatter} formatter
    */
 
   /**
    * Options that will be passed to the formatter;
    * Feel free to mutate or exchange.
-   * @member {object} fmtOpts
+   * @memberOf MemLogger#
+   * @member {Object} fmtOpts
    */
 
   /* istanbul ignore next */
@@ -615,7 +620,7 @@ const rootLogger = new MultiLogger({
  * that handles exceptions thrown by rootLogger.log.
  *
  * @function
- * @param {Any[]} msg – The message as you would hand it to console.log
+ * @param {Array} msg – The message as you would hand it to console.log
  * @param {Object} opts – Any options you would pass to rootLogger.log
  */
 const logWithOpts = (msg, opts) => {
@@ -705,7 +710,7 @@ const silly = (...msg) => logWithOpts(msg, { level: 'silly' });
  *
  * @param {Object} opts – optional first parameter; options passed to MemLogger
  * @param {Function} fn - The logs that this code emits will be recorded.
- * @returns {String} The logs that where produced by the codee
+ * @returns {string} The logs that where produced by the codee
  */
 const recordLogs = (opts, fn) => {
   if (opts instanceof Function) {
@@ -730,7 +735,6 @@ const recordLogs = (opts, fn) => {
  * const { assertLogs, info, err } = require('@adobe/helix-shared').log;
  *
  * assertLogs(() => {
-r
  *   info('Hello World\n');
  *   err('Nooo')
  * }, multiline(`
@@ -741,7 +745,7 @@ r
  *
  * @param {Object} opts – optional first parameter; options passed to MemLogger
  * @param {Function} fn - The logs that this code emits will be recorded.
- * @param {String} logs
+ * @param {string} logs
  */
 const assertLogs = (opts, fn, logs) => {
   if (opts instanceof Function) {
@@ -770,7 +774,7 @@ const assertLogs = (opts, fn, logs) => {
  *
  * @param {Object} opts – optional first parameter; options passed to MemLogger
  * @param {Function} fn - The logs that this code emits will be recorded.
- * @returns {String} The logs that where produced by the codee
+ * @returns {string} The logs that where produced by the codee
  */
 const recordAsyncLogs = async (opts, fn) => {
   if (opts instanceof Function) {
@@ -806,7 +810,7 @@ const recordAsyncLogs = async (opts, fn) => {
  *
  * @param {Object} opts – optional first parameter; options passed to MemLogger
  * @param {Function} fn - The logs that this code emits will be recorded.
- * @param {String} logs
+ * @param {string} logs
  */
 const assertAsyncLogs = async (opts, fn, logs) => {
   if (opts instanceof Function) {
