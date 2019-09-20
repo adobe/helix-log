@@ -18,6 +18,7 @@ const { rootLogger } = require('./log');
  * Bunyan stream that can be used to forward any bunyan messages
  * to helix log.
  *
+ * @example
  * ```
  * const bunyan = require('bunyan');
  * const { Bunyan2HelixLog } = require('helix-log');
@@ -51,7 +52,7 @@ const { rootLogger } = require('./log');
  * });
  * ```
  *
- * @param {HelixLogger} logger – The helix-log logger to…well…log top.
+ * @param {Logger} logger – The helix-log logger to…well…log to.
  *   If this is not given, the `rootLogger` will be used instead.
  */
 class Bunyan2HelixLog {

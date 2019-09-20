@@ -27,11 +27,7 @@ const _makeUrl = (url, opts) => {
   return String(o);
 };
 
-/**
- * Sends log messages to the logdna logging service.
- *
- * Log messages are sent immediately, but due to the use of HTTP
- *
+/*
  * ## Future Direction
  *
  * For this sort of necessarily asynchronous logger, we could launch a second process
@@ -42,58 +38,68 @@ const _makeUrl = (url, opts) => {
  * quick enough.
  * We could even use a journaling file/directory for communication so the other process could
  * even recover from a system crash...
+ */
+
+/**
+ * Sends log messages to the logdna logging service.
+ *
+ * Log messages are sent immediately.
  *
  * @class
  * @implements Logger
- * @param {String} apikey – Your logdna api key
- * @param {String} app – Name of the app under which the log messages should be categorized
- * @param {String} file – Name of the file(/subsystem) under which the
- *    log messages should be categorized
- * @param {Object} opts – Configuration object
- *
- *   - `level`: Default `silly`; The minimum log level to sent to logdna
- *   - `formatter`: Default `messageFormatJson`; A formatter producing json
- *   - `host`: Default is the system hostname; The hostname under which to categorize the messages
- *   - `apiurl`: Default `https://logs.logdna.com`; The url under which the logdna api is hosted.
- *
- *   All other options are forwarded to the formatter.
+ * @param {string} apikey – Your logdna api key
+ * @param {string} app – Name of the app under which the log messages should be categorized
+ * @param {string} file – Name of the file / subsystem under which
+ *   the log messages should be categorized
+ * @param {Object} opts – Configuration object. Options are also forwarded to the formatter
+ * @param {string} [opts.level=silly] The minimum log level to sent to logdna
+ * @param {MessageFormatter} [opts.formatter=messageFormatJson] A formatter producing json
+ * @param {string} [opts.host=<system hostname>] The hostname under which to categorize the messages
+ * @param {string} [opts.apiurl=https://logs.logdna.com] where the logdna api is hosted.
  */
 class LogdnaLogger {
   /**
    * The minimum log level for messages to be printed.
    * Feel free to change to one of the available levels.
+   * @memberOf LogdnaLogger#
    * @member {string} level
    */
 
   /**
    * Formatter used to format all the messages.
    * Must yield an object suitable for passing to JSON.serialize
+   * @memberOf LogdnaLogger#
    * @member {Function} formatter
    */
 
   /**
    * Options that will be passed to the formatter;
    * Feel free to mutate or exchange.
+   * @memberOf LogdnaLogger#
    * @member {object} fmtOpts
    */
 
   /**
    * Name of the app under which the log messages should be categorized
+   * @memberOf LogdnaLogger#
    * @member {String} apikey
    */
 
   /**
    * Name of the app under which the log messages should be categorized
+   * @memberOf LogdnaLogger#
    * @member {String} app
    */
 
   /**
    * The hostname under which to categorize the messages
+   * @memberOf LogdnaLogger#
    * @member {String} host
    */
 
   /**
    * The url under which the logdna api is hosted.
+   * @memberOf LogdnaLogger#
    * @member {String} apiurl
    */
 
