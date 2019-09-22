@@ -37,7 +37,7 @@
     "@semantic-release/github": "5.4.3",
     "ajv": "6.10.2",
     "bunyan": "^1.8.12",
-    "codecov": "3.5.0",
+    "codecov": "3.6.1",
     "eslint": "6.4.0",
     "eslint-plugin-header": "3.0.0",
     "eslint-plugin-import": "2.18.2",
