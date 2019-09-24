@@ -349,6 +349,7 @@ const messageFormatJson = (msg, opts) => {
  * @class
  * @param {Object} opts – Configuration object. All other options are forwarded to the formatter.
  * @param {string} [opts.level=info] The minimum log level
+ * @param {Writable} [opts.stream=console._stderr] A writable stream to log to.
  * @param {MessageFormatter} [opts.formatter=messageFormatConsole] A formatter producing strings
  */
 class ConsoleLogger {
@@ -374,11 +375,21 @@ class ConsoleLogger {
    * @member {object} fmtOpts
    */
 
+  /**
+   * Writable stream that is used to write the log messages to.
+   * @memberOf ConsoleLogger#
+   * @member {Writable} stream
+   */
+
   /* istanbul ignore next */
   constructor(opts = {}) {
     /* istanbul ignore next */
-    const { level = 'info', formatter = messageFormatConsole, ...fmtOpts } = opts;
-    assign(this, { level, formatter, fmtOpts });
+    const {
+      level = 'info', stream = console._stderr, formatter = messageFormatConsole, ...fmtOpts
+    } = opts;
+    assign(this, {
+      level, formatter, fmtOpts, stream,
+    });
   }
 
   /* istanbul ignore next */
@@ -388,9 +399,7 @@ class ConsoleLogger {
     /* istanbul ignore next */
     const { level = 'info' } = opts || {};
     if (numericLogLevel(level) <= numericLogLevel(this.level)) {
-      // Logs should go to stderr; this is only correct in node;
-      // in the browser we should use console.log
-      console.error(this.formatter(msg, { ...this.fmtOpts, level }));
+      this.stream.write(`${this.formatter(msg, { ...this.fmtOpts, level })}\n`);
     }
   }
 }

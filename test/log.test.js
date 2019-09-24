@@ -274,6 +274,10 @@ it('ConsoleLogger', async () => {
 
   out = await recordStderr(() => testLogger(new ConsoleLogger({ level: 'fatal' })));
   assert.strictEqual(out, logOutputFatalConsole);
+
+  const ss = new StringStream();
+  testLogger(new ConsoleLogger({ level: 'fatal', stream: ss }));
+  assert.strictEqual(ss.extract(), logOutputFatalConsole);
 });
 
 it('FileLogger', async () => {
