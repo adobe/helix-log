@@ -98,7 +98,7 @@ const tryInspect = (what, opts) => {
       await new Promise((res) => setImmediate(res));
       for (const e of errors) {
         const ser = tryInspect(e, { ...opts, recursiveErrorHandling: true });
-        error(`Error while inspecting object for log message: ${ser}`);
+        rootFacade.error(`Error while inspecting object for log message: ${ser}`);
       }
     }
   });
@@ -260,43 +260,47 @@ const messageFormatConsole = (msg, opts) => {
  */
 const messageFormatJson = (msg, opts) => {
   /* istanbul ignore next */
-  const { level = 'info', ...serialzeOpts } = opts || {};
+  const { level = 'info', data: _data = {}, ...serialzeOpts } = opts || {};
 
-  let data = {};
+  // create shallow copy, so we don't modify existing fields
+  let data = { ..._data };
 
   const setReserved = (name, val) => {
     /* istanbul ignore next */
     if (name in data) {
-      error("Can't log the", name, 'field using the json formatter. It is a reserved field!');
+      rootFacade.error("Can't log the", name, 'field using the json formatter. It is a reserved field!');
     }
     data[name] = val;
   };
 
-  // Try encoding the last item as json; provided there is a last
-  // item; it is not a string and it can be encoded as json.
-  if (!empty(msg) && type(last(msg)) !== String) {
-    let lst = last(msg);
+  // if the serialize options has no data, try guessing the last argument
+  if (Object.keys(data).length === 0) {
+    // Try encoding the last item as json; provided there is a last
+    // item; it is not a string and it can be encoded as json.
+    if (!empty(msg) && type(last(msg)) !== String) {
+      let lst = last(msg);
 
-    // Exceptions are encoded as the exception field in json
-    if (lst instanceof Error) {
-      lst = { exception: lst };
-    }
-
-    // Try json encoding the field; if this is supported
-    try {
-      lst = jsonifyForLog(lst);
-    } catch (er) {
-      lst = undefined;
-      /* istanbul ignore next */
-      if (!(er instanceof TraitNotImplemented)) {
-        throw er;
+      // Exceptions are encoded as the exception field in json
+      if (lst instanceof Error) {
+        lst = { exception: lst };
       }
-    }
 
-    // Was successful
-    if (type(lst) === Object) {
-      data = lst;
-      msg = list(take(msg, size(msg) - 1));
+      // Try json encoding the field; if this is supported
+      try {
+        lst = jsonifyForLog(lst);
+      } catch (er) {
+        lst = undefined;
+        /* istanbul ignore next */
+        if (!(er instanceof TraitNotImplemented)) {
+          throw er;
+        }
+      }
+
+      // Was successful
+      if (type(lst) === Object) {
+        data = lst;
+        msg = list(take(msg, size(msg) - 1));
+      }
     }
   }
 
@@ -399,7 +403,7 @@ class ConsoleLogger {
     /* istanbul ignore next */
     const { level = 'info' } = opts || {};
     if (numericLogLevel(level) <= numericLogLevel(this.level)) {
-      this.stream.write(`${this.formatter(msg, { ...this.fmtOpts, level })}\n`);
+      this.stream.write(`${this.formatter(msg, { ...opts, ...this.fmtOpts, level })}\n`);
     }
   }
 }
@@ -464,7 +468,7 @@ class MultiLogger {
           await new Promise((res) => setImmediate(res));
           // Defensive coding: Not printing the message here because the message
           // may have triggered the exception…
-          error(metaErr, name, '-', sub, ': ', err);
+          rootFacade.error(metaErr, name, '-', sub, ': ', err);
         }
       }
     });
@@ -536,7 +540,7 @@ class FileLogger {
       return;
     }
 
-    writeSync(this.fd, `${this.formatter(msg, { ...this.fmtOpts, level })}\n`);
+    writeSync(this.fd, `${this.formatter(msg, { ...opts, ...this.fmtOpts, level })}\n`);
   }
 
   close() {
@@ -549,7 +553,6 @@ class FileLogger {
  *
  * @class
  * @implements Logger
- * @class
  * @param {Object} opts – Configuration object. All other options are forwarded to the formatter.
  * @param {string} [opts.level=info] The minimum log level
  * @param {MessageFormatter} [opts.formatter=messageFormatSimple] A formatter any format.
@@ -597,8 +600,149 @@ class MemLogger {
     /* istanbul ignore next */
     const { level = 'info' } = opts || {};
     if (numericLogLevel(level) <= numericLogLevel(this.level)) {
-      this.buf.push(this.formatter(msg, { ...this.fmtOpts, level }));
+      this.buf.push(this.formatter(msg, { ...opts, ...this.fmtOpts, level }));
     }
+  }
+}
+
+/**
+ * Log facade that simplifies logging to a logger.
+ *
+ * @class
+ * @param {Logger} logger - the logger to forward logging
+ * @param {*} [fields={}] - optional data fields
+ */
+class LogFacade {
+  /**
+   * The logger this facade uses
+   * @memberOf LogFacade#
+   * @memberOf {Logger} logger
+   */
+
+  /**
+   * Data fields assigned to this log facade.
+   * @memberOf LogFacade#
+   * @memberOf {*} fields
+   */
+
+  /* istanbul ignore next */
+  constructor(logger, fields = {}) {
+    this.logger = logger;
+    this.fields = fields;
+  }
+
+  /**
+   * Sets data on this log facade.
+   *
+   * @param {*} fields - any properties
+   * @returns {LogFacade} this
+   */
+  data(fields = {}) {
+    Object.assign(this.fields, fields);
+    return this;
+  }
+
+  /**
+   * Creats a child log facade with bound data fields.
+   * @param {*} [fields={}] - optional data fields
+   * @returns {LogFacade} - a new log facade
+   */
+  child(fields = {}) {
+    return new LogFacade(this.logger, {
+      ...this.fields,
+      ...fields,
+    });
+  }
+
+  /**
+   * Log to the logger; this is a wrapper around `this.logger.log`
+   * that handles exceptions thrown by logger.log.
+   *
+   * @param {Array} msg – The message as you would hand it to console.log
+   * @param {Object} opts – Any options you would pass to rootLogger.log
+   */
+  logWithOpts(msg, opts) {
+    try {
+      this.logger.log(msg, {
+        data: this.fields,
+        ...opts,
+      });
+    } catch (er) {
+      console.error('Failed to log message:', ...msg);
+      console.error('Cause:', er);
+    }
+  }
+
+  /**
+   * Uses the currently installed logger to print a fatal error-message
+   * @param {...*} msg – The message as you would hand it to console.log
+   */
+  fatal(...msg) {
+    this.logWithOpts(msg, { level: 'fatal' });
+  }
+
+  /**
+   * Uses the currently installed logger to print an error message
+   * @param {...*} msg – The message as you would hand it to console.log
+   */
+  error(...msg) {
+    this.logWithOpts(msg, { level: 'error' });
+  }
+
+  /**
+   * Uses the currently installed logger to print a warn message
+   * @param {...*} msg – The message as you would hand it to console.log
+   */
+  warn(...msg) {
+    this.logWithOpts(msg, { level: 'warn' });
+  }
+
+  /**
+   * Uses the currently installed logger to print an info message
+   * @param {...*} msg – The message as you would hand it to console.log
+   */
+  info(...msg) {
+    this.logWithOpts(msg, { level: 'info' });
+  }
+
+  /**
+   * Uses the currently installed logger to print an info message
+   * @param {...*} msg – The message as you would hand it to console.log
+   */
+  log(...msg) {
+    this.logWithOpts(msg, { level: 'info' });
+  }
+
+  /**
+   * Uses the currently installed logger to print a verbose message
+   * @param {...*} msg – The message as you would hand it to console.log
+   */
+  verbose(...msg) {
+    this.logWithOpts(msg, { level: 'verbose' });
+  }
+
+  /**
+   * Uses the currently installed logger to print a debug message
+   * @param {...*} msg – The message as you would hand it to console.log
+   */
+  debug(...msg) {
+    this.logWithOpts(msg, { level: 'debug' });
+  }
+
+  /**
+   * Uses the currently installed logger to print a trace message
+   * @param {...*} msg – The message as you would hand it to console.log
+   */
+  trace(...msg) {
+    this.logWithOpts(msg, { level: 'trace' });
+  }
+
+  /**
+   * Uses the currently installed logger to print a silly message
+   * @param {...*} msg – The message as you would hand it to console.log
+   */
+  silly(...msg) {
+    this.logWithOpts(msg, { level: 'silly' });
   }
 }
 
@@ -625,42 +769,31 @@ const rootLogger = new MultiLogger({
 });
 
 /**
- * Lot to the root logger; this is a wrapper around `rootLogger.log`
- * that handles exceptions thrown by rootLogger.log.
- *
- * @function
- * @param {Array} msg – The message as you would hand it to console.log
- * @param {Object} opts – Any options you would pass to rootLogger.log
+ * The root log facade that logs to the rootLogger.
+ * @type {LogFacade}
  */
-const logWithOpts = (msg, opts) => {
-  try {
-    rootLogger.log(msg, opts);
-  } catch (er) {
-    console.error('Failed to log message:', ...msg);
-    console.error('Cause:', er);
-  }
-};
+const rootFacade = new LogFacade(rootLogger);
 
 /**
  * Uses the currently installed logger to print a fatal error-message
  * @function
  * @param {...*} msg – The message as you would hand it to console.log
  */
-const fatal = (...msg) => logWithOpts(msg, { level: 'fatal' });
+const fatal = rootFacade.fatal.bind(rootFacade);
 
 /**
  * Uses the currently installed logger to print an error-message
  * @function
  * @param {...*} msg – The message as you would hand it to console.log
  */
-const error = (...msg) => logWithOpts(msg, { level: 'error' });
+const error = rootFacade.error.bind(rootFacade);
 
 /**
  * Uses the currently installed logger to print a warn message
  * @function
  * @param {...*} msg – The message as you would hand it to console.log
  */
-const warn = (...msg) => logWithOpts(msg, { level: 'warn' });
+const warn = rootFacade.warn.bind(rootFacade);
 
 /**
  * Uses the currently installed logger to print an informational message
@@ -668,7 +801,7 @@ const warn = (...msg) => logWithOpts(msg, { level: 'warn' });
  * @param {...*} msg – The message as you would hand it to console.log
  * @alias log
  */
-const info = (...msg) => logWithOpts(msg, { level: 'info' });
+const info = rootFacade.info.bind(rootFacade);
 const log = info;
 
 /**
@@ -676,28 +809,28 @@ const log = info;
  * @function
  * @param {...*} msg – The message as you would hand it to console.log
  */
-const verbose = (...msg) => logWithOpts(msg, { level: 'verbose' });
+const verbose = rootFacade.verbose.bind(rootFacade);
 
 /**
  * Uses the currently installed logger to print a message intended for debugging
  * @function
  * @param {...*} msg – The message as you would hand it to console.log
  */
-const debug = (...msg) => logWithOpts(msg, { level: 'debug' });
+const debug = rootFacade.debug.bind(rootFacade);
 
 /**
  * Uses the currently installed logger to print a trace level message
  * @function
  * @param {...*} msg – The message as you would hand it to console.log
  */
-const trace = (...msg) => logWithOpts(msg, { level: 'trace' });
+const trace = rootFacade.trace.bind(rootFacade);
 
 /**
  * Uses the currently installed logger to print a silly level message
  * @function
  * @param {...*} msg – The message as you would hand it to console.log
  */
-const silly = (...msg) => logWithOpts(msg, { level: 'silly' });
+const silly = rootFacade.silly.bind(rootFacade);
 
 /**
  * Record the log files with debug granularity while the given function is running.
@@ -840,8 +973,10 @@ module.exports = {
   MultiLogger,
   FileLogger,
   MemLogger,
+  LogFacade,
   rootLogger,
-  logWithOpts,
+  rootFacade,
+  logWithOpts: rootFacade.logWithOpts.bind(rootFacade),
   fatal,
   error,
   info,
