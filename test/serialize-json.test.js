@@ -112,7 +112,7 @@ describe('serialize-json', () => {
   });
 
   class UnsupportedClass {}
-  const forbidden = [undefined, UnsupportedClass];
+  const forbidden = [UnsupportedClass];
 
   each(forbidden, (what) => {
     it(`refuses to serialize ${typename(type(what))}`, () => {

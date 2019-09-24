@@ -145,10 +145,11 @@ it('messageFormatJson', () => {
     level: 'error',
   });
 
-  ck('error', ['Foo bar', { hello: 42, level: 'fnord' }], {
+  ck('error', ['Foo bar', { hello: 42, level: 'fnord', notdefined: undefined }], {
     hello: 42,
     message: 'Foo bar',
     level: 'fnord',
+    notdefined: undefined,
   });
 
   ck('error', ['Foo bar'], {

@@ -43,6 +43,7 @@ const jsonifyForLog = (what) => JsonifyForLog.invoke(what);
  * Trait used to serialize json objects to json. See jsonifyForLog.
  */
 const JsonifyForLog = new Trait('JsonifyForLog');
+JsonifyForLog.impl(undefined, identity);
 JsonifyForLog.impl(String, identity);
 JsonifyForLog.impl(Number, identity);
 JsonifyForLog.impl(Boolean, identity);
