@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/adobe/helix-log/compare/v2.0.1...v2.1.0) (2019-09-25)
+
+
+### Features
+
+* **log:** make console logger stream configurable ([#41](https://github.com/adobe/helix-log/issues/41)) ([445421b](https://github.com/adobe/helix-log/commit/445421b)), closes [#38](https://github.com/adobe/helix-log/issues/38)
+
 ## [2.0.1](https://github.com/adobe/helix-log/compare/v2.0.0...v2.0.1) (2019-09-20)
 
 
