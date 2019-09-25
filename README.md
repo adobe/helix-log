@@ -458,6 +458,7 @@ all non-strings.
     * [.level](#ConsoleLogger+level) : <code>string</code>
     * [.formatter](#ConsoleLogger+formatter) : [<code>MessageFormatter</code>](#MessageFormatter)
     * [.fmtOpts](#ConsoleLogger+fmtOpts) : <code>object</code>
+    * [.stream](#ConsoleLogger+stream) : <code>Writable</code>
     * [.log(msg, opts)](#ConsoleLogger+log)
 
 <a name="new_ConsoleLogger_new"></a>
@@ -468,6 +469,7 @@ all non-strings.
 | --- | --- | --- | --- |
 | opts | <code>Object</code> |  | – Configuration object. All other options are forwarded to the formatter. |
 | [opts.level] | <code>string</code> | <code>&quot;info&quot;</code> | The minimum log level |
+| [opts.stream] | <code>Writable</code> | <code>console._stderr</code> | A writable stream to log to. |
 | [opts.formatter] | [<code>MessageFormatter</code>](#MessageFormatter) | <code>messageFormatConsole</code> | A formatter producing strings |
 
 <a name="ConsoleLogger+level"></a>
@@ -490,6 +492,12 @@ Feel free to mutate or exchange.
 ### consoleLogger.fmtOpts : <code>object</code>
 Options that will be passed to the formatter;
 Feel free to mutate or exchange.
+
+**Kind**: instance property of [<code>ConsoleLogger</code>](#ConsoleLogger)  
+<a name="ConsoleLogger+stream"></a>
+
+### consoleLogger.stream : <code>Writable</code>
+Writable stream that is used to write the log messages to.
 
 **Kind**: instance property of [<code>ConsoleLogger</code>](#ConsoleLogger)  
 <a name="ConsoleLogger+log"></a>
