@@ -1,3 +1,10 @@
+## [2.1.1](https://github.com/adobe/helix-log/compare/v2.1.0...v2.1.1) (2019-09-26)
+
+
+### Bug Fixes
+
+* **log:** allow serialization of undefined ([87812be](https://github.com/adobe/helix-log/commit/87812be)), closes [#46](https://github.com/adobe/helix-log/issues/46)
+
 # [2.1.0](https://github.com/adobe/helix-log/compare/v2.0.1...v2.1.0) (2019-09-25)
 
 
