@@ -1,3 +1,10 @@
+# [2.2.0](https://github.com/adobe/helix-log/compare/v2.1.1...v2.2.0) (2019-09-26)
+
+
+### Features
+
+* **log:** add log facade that allows to bind data values for json logging ([#42](https://github.com/adobe/helix-log/issues/42)) ([9c91fd2](https://github.com/adobe/helix-log/commit/9c91fd2)), closes [#34](https://github.com/adobe/helix-log/issues/34) [#26](https://github.com/adobe/helix-log/issues/26) [#30](https://github.com/adobe/helix-log/issues/30)
+
 ## [2.1.1](https://github.com/adobe/helix-log/compare/v2.1.0...v2.1.1) (2019-09-26)
 
 
