@@ -15,8 +15,18 @@
 const assert = require('assert');
 const { join } = require('ferrum');
 const {
-  MemLogger, LogFacade, messageFormatJson,
-} = require('../src/log');
+  MemLogger, LogFacade, messageFormatJson, JsonifyForLog,
+} = require('../src/index');
+
+class MyTestClass {
+  constructor(value) {
+    this.value = value;
+  }
+
+  [JsonifyForLog.sym]() {
+    return `[TestClass: ${this.value}]`;
+  }
+}
 
 const cleanTimestamp = (buf) => {
   buf.forEach((msg) => {
@@ -61,6 +71,23 @@ describe('LogFacade', () => {
       foo: 42,
       level: 'debug',
       message: 'debug 0',
+    }]);
+  });
+
+  it('logs data with custom traits', () => {
+    const logger = new MemLogger({
+      level: 'silly',
+      formatter: messageFormatJson,
+    });
+    const log = new LogFacade(logger, { foo: 42, test: new MyTestClass('hello') });
+    log.debug('debug', 0);
+
+    const out = cleanTimestamp(logger.buf);
+    assert.deepEqual(out, [{
+      foo: 42,
+      level: 'debug',
+      message: 'debug 0',
+      test: '[TestClass: hello]',
     }]);
   });
 

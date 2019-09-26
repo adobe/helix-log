@@ -262,8 +262,14 @@ const messageFormatJson = (msg, opts) => {
   /* istanbul ignore next */
   const { level = 'info', data: _data = {}, ...serialzeOpts } = opts || {};
 
-  // create shallow copy, so we don't modify existing fields
-  let data = { ..._data };
+  let data = {};
+
+  try {
+    data = jsonifyForLog(_data);
+  } catch (e) {
+    // ignore and just use the raw data
+    data = { ..._data };
+  }
 
   const setReserved = (name, val) => {
     /* istanbul ignore next */
