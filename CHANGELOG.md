@@ -1,3 +1,10 @@
+## [2.2.1](https://github.com/adobe/helix-log/compare/v2.2.0...v2.2.1) (2019-09-27)
+
+
+### Bug Fixes
+
+* **coralogix:** data fields are not logged ([#49](https://github.com/adobe/helix-log/issues/49)) ([f51e44e](https://github.com/adobe/helix-log/commit/f51e44e))
+
 # [2.2.0](https://github.com/adobe/helix-log/compare/v2.1.1...v2.2.0) (2019-09-26)
 
 
