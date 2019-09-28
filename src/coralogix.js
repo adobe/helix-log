@@ -142,7 +142,7 @@ class CoralogixLogger {
         computerName: this.host,
         logEntries: [{
           timestamp: new Date().getTime(),
-          text: JSON.stringify(this.formatter(msg, { ...opts, ...this.fmtOpts, level })),
+          text: JSON.stringify(this.formatter(msg, { ...this.fmtOpts, level })),
           severity: _logLevelMapping[level],
         }],
       },
