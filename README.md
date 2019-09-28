@@ -76,9 +76,6 @@ time.</p>
 <dt><a href="#MemLogger">MemLogger</a></dt>
 <dd><p>Logs messages to an in-memory buffer.</p>
 </dd>
-<dt><a href="#LogFacade">LogFacade</a></dt>
-<dd><p>Log facade that simplifies logging to a logger.</p>
-</dd>
 <dt><a href="#LogdnaLogger">LogdnaLogger</a></dt>
 <dd><p>Sends log messages to the logdna logging service.</p>
 <p>Log messages are sent immediately.</p>
@@ -98,9 +95,6 @@ rootLogger.loggers.set(&#39;default&#39;, new ConsoleLogger({level: &#39;debug&#
 <p>You should not log to the root logger directly; instead use one of the
 wrapper functions <code>log, fatal, err, warn, info, verbose, debug</code>; they
 perform some additional</p>
-</dd>
-<dt><a href="#rootFacade">rootFacade</a> : <code><a href="#LogFacade">LogFacade</a></code></dt>
-<dd><p>The root log facade that logs to the rootLogger.</p>
 </dd>
 <dt><a href="#JsonifyForLog">JsonifyForLog</a></dt>
 <dd><p>Trait used to serialize json objects to json. See jsonifyForLog.</p>
@@ -164,6 +158,10 @@ object generated.</p>
 default values.</p>
 <p>If the last object is an exception, it will be sent as { exception: $exception };
 this serves to facilitate searching for exceptions explicitly.</p>
+</dd>
+<dt><a href="#logWithOpts">logWithOpts(msg, opts)</a></dt>
+<dd><p>Lot to the root logger; this is a wrapper around <code>rootLogger.log</code>
+that handles exceptions thrown by rootLogger.log.</p>
 </dd>
 <dt><a href="#fatal">fatal(...msg)</a></dt>
 <dd><p>Uses the currently installed logger to print a fatal error-message</p>
@@ -725,173 +723,6 @@ still catch any errors and handle them appropriately.
 | msg | <code>Array</code> | The message; list of arguments as you would pass it to console.log |
 | opts | <code>Object</code> | – Configuration object; contains only one key at   the moment: `level` - The log level which can be one of `error, warn,   info, verbose` and `debug`. |
 
-<a name="LogFacade"></a>
-
-## LogFacade
-Log facade that simplifies logging to a logger.
-
-**Kind**: global class  
-
-* [LogFacade](#LogFacade)
-    * [new LogFacade(logger, [fields])](#new_LogFacade_new)
-    * [.data(fields)](#LogFacade+data) ⇒ [<code>LogFacade</code>](#LogFacade)
-    * [.child([fields])](#LogFacade+child) ⇒ [<code>LogFacade</code>](#LogFacade)
-    * [.logWithOpts(msg, opts)](#LogFacade+logWithOpts)
-    * [.fatal(...msg)](#LogFacade+fatal)
-    * [.error(...msg)](#LogFacade+error)
-    * [.warn(...msg)](#LogFacade+warn)
-    * [.info(...msg)](#LogFacade+info)
-    * [.log(...msg)](#LogFacade+log)
-    * [.verbose(...msg)](#LogFacade+verbose)
-    * [.debug(...msg)](#LogFacade+debug)
-    * [.trace(...msg)](#LogFacade+trace)
-    * [.silly(...msg)](#LogFacade+silly)
-
-<a name="new_LogFacade_new"></a>
-
-### new LogFacade(logger, [fields])
-
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| logger | [<code>Logger</code>](#Logger) |  | the logger to forward logging |
-| [fields] | <code>\*</code> | <code>{}</code> | optional data fields |
-
-<a name="LogFacade+data"></a>
-
-### logFacade.data(fields) ⇒ [<code>LogFacade</code>](#LogFacade)
-Sets data on this log facade.
-
-**Kind**: instance method of [<code>LogFacade</code>](#LogFacade)  
-**Returns**: [<code>LogFacade</code>](#LogFacade) - this  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| fields | <code>\*</code> | any properties |
-
-<a name="LogFacade+child"></a>
-
-### logFacade.child([fields]) ⇒ [<code>LogFacade</code>](#LogFacade)
-Creats a child log facade with bound data fields.
-
-**Kind**: instance method of [<code>LogFacade</code>](#LogFacade)  
-**Returns**: [<code>LogFacade</code>](#LogFacade) - - a new log facade  
-
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| [fields] | <code>\*</code> | <code>{}</code> | optional data fields |
-
-<a name="LogFacade+logWithOpts"></a>
-
-### logFacade.logWithOpts(msg, opts)
-Log to the logger; this is a wrapper around `this.logger.log`
-that handles exceptions thrown by logger.log.
-
-**Kind**: instance method of [<code>LogFacade</code>](#LogFacade)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| msg | <code>Array</code> | – The message as you would hand it to console.log |
-| opts | <code>Object</code> | – Any options you would pass to rootLogger.log |
-
-<a name="LogFacade+fatal"></a>
-
-### logFacade.fatal(...msg)
-Uses the currently installed logger to print a fatal error-message
-
-**Kind**: instance method of [<code>LogFacade</code>](#LogFacade)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="LogFacade+error"></a>
-
-### logFacade.error(...msg)
-Uses the currently installed logger to print an error message
-
-**Kind**: instance method of [<code>LogFacade</code>](#LogFacade)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="LogFacade+warn"></a>
-
-### logFacade.warn(...msg)
-Uses the currently installed logger to print a warn message
-
-**Kind**: instance method of [<code>LogFacade</code>](#LogFacade)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="LogFacade+info"></a>
-
-### logFacade.info(...msg)
-Uses the currently installed logger to print an info message
-
-**Kind**: instance method of [<code>LogFacade</code>](#LogFacade)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="LogFacade+log"></a>
-
-### logFacade.log(...msg)
-Uses the currently installed logger to print an info message
-
-**Kind**: instance method of [<code>LogFacade</code>](#LogFacade)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="LogFacade+verbose"></a>
-
-### logFacade.verbose(...msg)
-Uses the currently installed logger to print a verbose message
-
-**Kind**: instance method of [<code>LogFacade</code>](#LogFacade)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="LogFacade+debug"></a>
-
-### logFacade.debug(...msg)
-Uses the currently installed logger to print a debug message
-
-**Kind**: instance method of [<code>LogFacade</code>](#LogFacade)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="LogFacade+trace"></a>
-
-### logFacade.trace(...msg)
-Uses the currently installed logger to print a trace message
-
-**Kind**: instance method of [<code>LogFacade</code>](#LogFacade)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="LogFacade+silly"></a>
-
-### logFacade.silly(...msg)
-Uses the currently installed logger to print a silly message
-
-**Kind**: instance method of [<code>LogFacade</code>](#LogFacade)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
 <a name="LogdnaLogger"></a>
 
 ## LogdnaLogger
@@ -1011,12 +842,6 @@ rootLogger.loggers.set('default', new ConsoleLogger({level: 'debug'}));
 You should not log to the root logger directly; instead use one of the
 wrapper functions `log, fatal, err, warn, info, verbose, debug`; they
 perform some additional
-
-**Kind**: global constant  
-<a name="rootFacade"></a>
-
-## rootFacade : [<code>LogFacade</code>](#LogFacade)
-The root log facade that logs to the rootLogger.
 
 **Kind**: global constant  
 <a name="JsonifyForLog"></a>
@@ -1167,6 +992,19 @@ this serves to facilitate searching for exceptions explicitly.
 | --- | --- | --- |
 | msg | <code>Array</code> | – Parameters as you would pass them to console.log |
 | opts | <code>Object</code> | – Parameters are forwarded to serializeMessage; other than that:   - level: one of the log levels; this parameter is required. |
+
+<a name="logWithOpts"></a>
+
+## logWithOpts(msg, opts)
+Lot to the root logger; this is a wrapper around `rootLogger.log`
+that handles exceptions thrown by rootLogger.log.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| msg | <code>Array</code> | – The message as you would hand it to console.log |
+| opts | <code>Object</code> | – Any options you would pass to rootLogger.log |
 
 <a name="fatal"></a>
 
