@@ -1,3 +1,10 @@
+## [2.2.2](https://github.com/adobe/helix-log/compare/v2.2.1...v2.2.2) (2019-09-28)
+
+
+### Bug Fixes
+
+* **log:** revert LogFacade changes ([#50](https://github.com/adobe/helix-log/issues/50)) ([34d2f9a](https://github.com/adobe/helix-log/commit/34d2f9a))
+
 ## [2.2.1](https://github.com/adobe/helix-log/compare/v2.2.0...v2.2.1) (2019-09-27)
 
 
