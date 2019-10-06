@@ -34,14 +34,14 @@ describe('Secret', () => {
     it('cannot be extracted using ', () => {
       const uu = 'cb1e7724-be69-432f-bf83-9762ba5608ee';
       const s = new Secret(uu);
-      const x = inspect(fn(s), { depth: null, colors: false});
+      const x = inspect(fn(s), { depth: null, colors: false });
       assert(!x.match(uu));
     });
-  }
+  };
 
-  ck('inspect', x => x);
-  ck('toString', x => x.toString());
-  ck('JSON', x => JSON.stringify(x));
-  ck('Object.keys', x => Object.keys(x));
-  ck('Object.getOwnPropertyDescriptors', x => Object.getOwnPropertyDescriptors(x));
+  ck('inspect', (x) => x);
+  ck('toString', (x) => x.toString());
+  ck('JSON', (x) => JSON.stringify(x));
+  ck('Object.keys', (x) => Object.keys(x));
+  ck('Object.getOwnPropertyDescriptors', (x) => Object.getOwnPropertyDescriptors(x));
 });

@@ -26,12 +26,11 @@ const {
   join, dict, pipe, filter, reject, map,
 } = require('ferrum');
 const {
-  numericLogLevel, serializeMessage, ConsoleLogger,
-  rootLogger, assertAsyncLogs, assertLogs, recordLogs, recordAsyncLogs,
-  tryInspect, error, warn, info, verbose, debug,
+  numericLogLevel, serializeMessage, ConsoleLogger, rootLogger,
+  recordAsyncLogs, tryInspect, error, warn, info, verbose, debug,
   FileLogger, MemLogger, MultiLogger, fatal, messageFormatSimple,
   messageFormatTechnical, messageFormatConsole, messageFormatJson,
-} = require('../src/log');
+} = require('../src');
 const { ckEq } = require('./util');
 
 const readFile = promisify(fs.readFile);
@@ -345,95 +344,4 @@ it('MultiLogger', async () => {
 
   assert.strictEqual(logs, `${logOutputSimple}[INFO] Hello World\n`
     + '[ERROR] MultiLogger encountered exception while logging to foo - MemLogger { level: \'debug\', formatter: [Function: messageFormatSimple], fmtOpts: {}, buf: null } :  TypeError: Cannot read property \'push\' of null\n\n');
-});
-
-it('recordLogs, assertLogs', () => {
-  // assertLogs: without opts, recordLogs: with opts
-  assertLogs(() => {
-    info('Hello World');
-    verbose('Foo');
-    error('Bar');
-  },
-  '[INFO] Hello World\n'
-    + '[ERROR] Bar\n');
-
-  // Default logger restored
-  assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
-
-  // assertLogs: with opts, recordLogs: with opts
-  assertLogs({ level: 'warn' }, () => {
-    info('Hello World');
-    verbose('Foo');
-    error('Bar');
-  }, '[ERROR] Bar\n');
-  assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
-
-  // recordLogs: with opts
-  const logs = recordLogs(() => {
-    info('Hello World');
-    verbose('Foo');
-    error('Bar');
-  });
-  assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
-  assert.strictEqual(logs,
-    '[INFO] Hello World\n'
-    + '[ERROR] Bar\n');
-
-  // Exception safety
-  let ex;
-  try {
-    recordLogs(() => {
-      throw new Error();
-    });
-  } catch (e) {
-    ex = e;
-  }
-  assert(ex instanceof Error);
-  assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
-});
-
-it('recordAsyncLogs, assertAsyncLogs', async () => {
-  await assertAsyncLogs(async () => {
-    info('Hello World');
-    await new Promise((res) => setImmediate(res));
-    verbose('Foo');
-    await new Promise((res) => setImmediate(res));
-    error('Bar');
-  },
-  '[INFO] Hello World\n'
-    + '[ERROR] Bar\n');
-  assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
-
-  await assertAsyncLogs({ level: 'warn' }, async () => {
-    info('Hello World');
-    await new Promise((res) => setImmediate(res));
-    verbose('Foo');
-    await new Promise((res) => setImmediate(res));
-    error('Bar');
-  }, '[ERROR] Bar\n');
-  assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
-
-  const logs = await recordAsyncLogs(async () => {
-    info('Hello World');
-    await new Promise((res) => setImmediate(res));
-    verbose('Foo');
-    await new Promise((res) => setImmediate(res));
-    error('Bar');
-  });
-  assert.strictEqual(logs,
-    '[INFO] Hello World\n'
-    + '[ERROR] Bar\n');
-  assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
-
-  // Exception safety
-  let ex;
-  try {
-    await recordAsyncLogs(() => {
-      throw new Error();
-    });
-  } catch (e) {
-    ex = e;
-  }
-  assert(ex instanceof Error);
-  assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
 });
