@@ -21,10 +21,10 @@ const { rootLogger } = require('./log');
  * @example
  * ```
  * const bunyan = require('bunyan');
- * const { Bunyan2HelixLog } = require('helix-log');
+ * const { BunyanInterface } = require('helix-log');
  *
  * const logger = bunyan.createLogger({name: 'helixLogger'});
- * logger.addStream(Bunyan2HelixLog.createStream());
+ * logger.addStream(BunyanInterface.createStream());
  * ```
  *
  * or
@@ -33,7 +33,7 @@ const { rootLogger } = require('./log');
  * const logger = bunyan.createLogger({
  *    name: 'helixLogger',
  *    streams: [
- *      Bunyan2HelixLog.createStream()
+ *      BunyanInterface.createStream()
  *    ],
  * });
  * ```
@@ -46,7 +46,7 @@ const { rootLogger } = require('./log');
  *    streams: [
  *      {
  *        type: 'raw',
- *        stream: new Bunyan2HelixLog(rootLogger),
+ *        stream: new BunyanInterface(rootLogger),
  *      };
  *    ],
  * });
@@ -55,7 +55,7 @@ const { rootLogger } = require('./log');
  * @param {Logger} logger – The helix-log logger to…well…log to.
  *   If this is not given, the `rootLogger` will be used instead.
  */
-class Bunyan2HelixLog {
+class BunyanInterface {
   static createStream(...args) {
     return {
       type: 'raw',
@@ -69,7 +69,7 @@ class Bunyan2HelixLog {
 
   write(payload) {
     if (type(payload) !== Object) {
-      throw new Error('Bunyan2HelixLog requires a raw stream. Please use `"type": "raw"` when setting up the bunyan stream.');
+      throw new Error('BunyanInterface requires a raw stream. Please use `"type": "raw"` when setting up the bunyan stream.');
     }
 
     const {
@@ -103,4 +103,4 @@ class Bunyan2HelixLog {
   }
 }
 
-module.exports = { Bunyan2HelixLog };
+module.exports = { BunyanInterface };
