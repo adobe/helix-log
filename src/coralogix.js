@@ -15,6 +15,7 @@ const { hostname } = require('os');
 const path = require('path');
 const phin = require('phin');
 const { numericLogLevel, messageFormatJson } = require('./log');
+const { Secret } = require('./secret');
 
 const _logLevelMapping = {
   fatal: 6,
@@ -47,7 +48,7 @@ const _logLevelMapping = {
  *
  * @class
  * @implements Logger
- * @param {string} apikey – Your coralogix api key
+ * @param {string|Secret} apikey – Your coralogix api key
  * @param {string} app – Name of the app under which the log messages should be categorized
  * @param {string} subsystem – Name of the subsystem under which
  *   the log messages should be categorized
@@ -82,7 +83,7 @@ class CoralogixLogger {
   /**
    * Name of the app under which the log messages should be categorized
    * @memberOf CoralogixLogger#
-   * @member {string} apikey
+   * @member {Secret} apikey
    */
 
   /**
@@ -117,7 +118,14 @@ class CoralogixLogger {
       ...fmtOpts
     } = opts;
     assign(this, {
-      apikey, apiurl, app, subsystem, host, level, formatter, fmtOpts,
+      apikey: new Secret(apikey),
+      apiurl,
+      app,
+      subsystem,
+      host,
+      level,
+      formatter,
+      fmtOpts,
     });
   }
 
@@ -136,7 +144,7 @@ class CoralogixLogger {
         'Content-Type': 'application/json',
       },
       data: {
-        privateKey: this.apikey,
+        privateKey: this.apikey.secret,
         applicationName: this.app,
         subsystemName: this.subsystem,
         computerName: this.host,

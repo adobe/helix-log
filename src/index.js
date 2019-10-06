@@ -21,6 +21,7 @@ module.exports = {
   ...require('./coralogix'),
   ...require('./logdna'),
   ...require('./bunyan'),
+  ...require('./secret'),
 };
 
 // Make this repo a singleton.

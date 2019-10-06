@@ -17,6 +17,7 @@ const path = require('path');
 const phin = require('phin');
 const { iter } = require('ferrum');
 const { numericLogLevel, messageFormatJson } = require('./log');
+const { Secret } = require('./secret');
 
 /* istanbul ignore next */
 const _makeUrl = (url, opts) => {
@@ -47,7 +48,7 @@ const _makeUrl = (url, opts) => {
  *
  * @class
  * @implements Logger
- * @param {string} apikey – Your logdna api key
+ * @param {string|Secret} apikey – Your logdna api key
  * @param {string} app – Name of the app under which the log messages should be categorized
  * @param {string} file – Name of the file / subsystem under which
  *   the log messages should be categorized
@@ -82,7 +83,7 @@ class LogdnaLogger {
   /**
    * Name of the app under which the log messages should be categorized
    * @memberOf LogdnaLogger#
-   * @member {String} apikey
+   * @member {String|Secret} apikey
    */
 
   /**
@@ -117,7 +118,14 @@ class LogdnaLogger {
       ...fmtOpts
     } = opts;
     assign(this, {
-      apikey, apiurl, app, file, host, level, formatter, fmtOpts,
+      apikey: new Secret(apikey),
+      apiurl,
+      app,
+      file,
+      host,
+      level,
+      formatter,
+      fmtOpts,
     });
   }
 
@@ -137,7 +145,7 @@ class LogdnaLogger {
       },
       url: _makeUrl(path.join(this.apiurl, 'logs/ingest'), {
         hostname: this.host,
-        apikey: this.apikey,
+        apikey: this.apikey.secret,
         now,
       }),
       data: {
