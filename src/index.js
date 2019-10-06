@@ -22,6 +22,7 @@ module.exports = {
   ...require('./logdna'),
   ...require('./bunyan'),
   ...require('./secret'),
+  ...require('./recording'),
 };
 
 // Make this repo a singleton.
