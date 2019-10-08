@@ -18,21 +18,16 @@ const { pid } = require('process');
 const bunyan = require('bunyan');
 const { size, type, iter } = require('ferrum');
 const {
-  BunyanInterface, rootLogger, messageFormatJson, MemLogger,
+  BunyanStreamInterface, messageFormatJson, MemLogger,
 } = require('../src/index');
 const { ckEq } = require('./util');
 
-describe('BunyanInterface', () => {
-  it('._helixLogger()', () => {
-    ckEq(new BunyanInterface()._helixLogger(), rootLogger);
-    ckEq(new BunyanInterface(42)._helixLogger(), 42);
-  });
-
+describe('BunyanStreamInterface', () => {
   it('.createStream()', () => {
-    const opt = BunyanInterface.createStream();
+    const opt = BunyanStreamInterface.createStream();
     ckEq(size(opt), 2);
     ckEq(opt.type, 'raw');
-    ckEq(type(opt.stream), BunyanInterface);
+    ckEq(type(opt.stream), BunyanStreamInterface);
   });
 
   it('._bunyan2hlxLevel()', () => {
@@ -55,7 +50,7 @@ describe('BunyanInterface', () => {
       1000: 'fatal',
     };
     for (const [i, o] of iter(data)) {
-      ckEq(BunyanInterface.prototype._bunyan2hlxLevel(Number(i)), o);
+      ckEq(BunyanStreamInterface.prototype._bunyan2hlxLevel(Number(i)), o);
     }
   });
 
@@ -64,7 +59,7 @@ describe('BunyanInterface', () => {
     const bun = bunyan.createLogger({
       name: 'helixTestLogger',
       streams: [
-        BunyanInterface.createStream(hlx),
+        BunyanStreamInterface.createStream({ logger: hlx }),
       ],
     });
 
@@ -76,8 +71,8 @@ describe('BunyanInterface', () => {
     const t2 = new Date(hlx.buf[1].timestamp);
     delete hlx.buf[0].timestamp;
     delete hlx.buf[1].timestamp;
-    assert(t1 - t0 < 2); // 2ms time window
-    assert(t2 - t0 < 2);
+    assert(t1 - t0 < 5); // 5ms time window
+    assert(t2 - t0 < 5);
 
     const hostname = os.hostname();
     ckEq(hlx.buf, [

@@ -13,12 +13,10 @@
 /* eslint-env mocha */
 /* eslint-disable class-methods-use-this */
 
-const {
-  each, TraitNotImplemented, typename, type,
-} = require('ferrum');
+const { each, typename, type } = require('ferrum');
 const { URL } = require('url');
 const { JsonifyForLog, jsonifyForLog } = require('../src/serialize-json');
-const { ckEq, ckThrows } = require('./util');
+const { ckEq } = require('./util');
 
 describe('serialize-json', () => {
   class CustomClass {
@@ -109,14 +107,5 @@ describe('serialize-json', () => {
   // Test one complex example
   it('serializes complex example', () => {
     ckEq(jsonifyForLog(inp), out);
-  });
-
-  class UnsupportedClass {}
-  const forbidden = [UnsupportedClass];
-
-  each(forbidden, (what) => {
-    it(`refuses to serialize ${typename(type(what))}`, () => {
-      ckThrows(TraitNotImplemented, () => jsonifyForLog({ foo: [1, 2, new Map([['bar', new Set([what])]])] }));
-    });
   });
 });

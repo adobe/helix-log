@@ -17,7 +17,7 @@ const assert = require('assert');
 const { hostname } = require('os');
 const polka = require('polka');
 const { type, typename, empty } = require('ferrum');
-const { CoralogixLogger } = require('../src/coralogix');
+const { CoralogixLogger, makeLogMessage } = require('../src');
 const {
   post, listenRandomPort, readAll, stop,
 } = require('./polka-promise');
@@ -84,12 +84,13 @@ it('CoralogixLogger', async () => {
 
     const logger = new CoralogixLogger(apikey, app, subsystem, {
       apiurl: `http://localhost:${server.port}/`,
-      level: 'info',
     });
 
     const t0 = new Date().getTime();
-    logger.log(['Hello', 42, 'World', { bar: 23 }], { level: 'silly' }); // should not be logged
-    logger.log(['Hello', 42, 'World', { bar: 23 }], { level: 'warn' });
+    logger.log(makeLogMessage({
+      message: ['Hello ', 42, ' World ', { bar: 23 }],
+      fnord: 42,
+    }));
 
     const req = await server.nextReq();
 
@@ -101,7 +102,6 @@ it('CoralogixLogger', async () => {
     delete req.logEntries[0].timestamp;
     delete text.timestamp;
 
-
     assert((t1 - t0) < 10); // 10 ms window to send
     assert((t2 - t0) < 10);
     ckEq(req, {
@@ -110,13 +110,13 @@ it('CoralogixLogger', async () => {
       subsystemName: subsystem,
       computerName: hostname(),
       logEntries: [{
-        severity: 4,
+        severity: 3,
       }],
     });
     ckEq(text, {
-      bar: 23,
-      level: 'warn',
-      message: 'Hello 42 World',
+      level: 'info',
+      message: 'Hello 42 World { bar: 23 }',
+      fnord: 42,
     });
   } finally {
     await server.stop();

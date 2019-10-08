@@ -10,23 +10,24 @@
  * governing permissions and limitations under the License.
  */
 
-/* eslint-disable no-console, no-param-reassign, no-use-before-define, consistent-return */
+/* eslint-disable no-console, no-param-reassign, no-use-before-define */
+/* eslint-disable consistent-return, lines-between-class-members, implicit-arrow-linebreak */
 
 const { assign } = Object;
 const { abs, floor } = Math;
-const { openSync, closeSync, writeSync } = require('fs');
 const { inspect } = require('util');
 const {
   black, bgRed, bgYellow, bgBlackBright, bgBlueBright,
 } = require('colorette');
 const {
-  dict, exec, isdef, each, join, empty, type, last, TraitNotImplemented,
-  list, take, size, setdefault, repeat,
+  dict, exec, isdef, each, join, type, list, take, size, identity,
+  repeat, intersperse, typename, empty, eq,
 } = require('ferrum');
+const { openSync, closeSync, writeSync } = require('fs');
 const { jsonifyForLog } = require('./serialize-json');
 
 // This is the superset of log levels supported by console, bunyan and winston
-const _loglevelMap = {
+const __loglevelMap = {
   fatal: 0,
   error: 1,
   warn: 2,
@@ -46,14 +47,74 @@ const _loglevelMap = {
  * @returns {number} The numeric log level
  */
 const numericLogLevel = (name) => {
-  const r = _loglevelMap[name];
+  const r = __loglevelMap[name];
   if (r === undefined) {
     throw new Error(`Not a valid log level: ${name}`);
   }
   return r;
 };
 
-numericLogLevel._loglevelMap = _loglevelMap;
+numericLogLevel.__loglevelMap = __loglevelMap;
+
+/**
+ * Internally helix log passe these messages around.
+ *
+ * Messages are just plain objects with some conventions
+ * regarding their fields:
+ *
+ * @example
+ * ```
+ * const myMessage = {
+ *   // REQUIRED
+ *
+ *   level: 'info',
+ *   timestamp: new Date(),
+ *
+ *   // OPTIONAL
+ *
+ *   // This is what constitutes the actual log message an array
+ *   // of any js objects which are usually later converted to text
+ *   // using `tryInspect()`; we defer this text conversion step so
+ *   // formatters can do more fancy operations (like colorizing certain
+ *   // types; or we could)
+ *   message: ['Print ', 42, ' deep thoughts!']
+ *   exception: {
+ *
+ *     // REQUIRED
+ *     $type: 'MyCustomException',
+ *     name; 'MyCustomException',
+ *     message: 'Some custom exception ocurred',
+ *     stack: '...',
+ *
+ *     // OPTIONAL
+ *     code: 42,
+ *     causedBy: <nested exception>
+ *
+ *     // EXCEPTION MAY CONTAIN ARBITRARY OTHER FIELDS
+ *     ...fields,
+ *   }
+ *
+ *   // MESSAGE MAY CONTAIN ARBITRARY OTHER FIELDS
+ *   ...fields,
+ * }
+ * ```
+ *
+ * @interface Message
+ */
+
+/**
+ * Supplies default values for all the required fields in log messages.
+ *
+ * @function
+ * @param {Object} [fields={}] User supplied field values; can overwrite
+ *   any default values
+ * @returns {Message}
+ */
+const makeLogMessage = (fields = {}) => ({
+  level: 'info',
+  timestamp: new Date(),
+  ...fields,
+});
 
 /**
  * Wrapper around inspect that is extremely robust against errors
@@ -65,18 +126,19 @@ numericLogLevel._loglevelMap = _loglevelMap;
  * If any error is encountered a less informative string than a full
  * inspect is returned and the error is logged using `err()`.
  *
+ * @function
  * @param {*} what The object to inspect
  * @param {Object} opts Options will be passed through to inspect.
  *   Note that these may be ignored if there is an error during inspect().
  */
-const tryInspect = (what, opts) => {
-  opts = { depth: null, breakLength: Infinity, ...opts };
+const tryInspect = (what, opts = {}) => {
+  const opts_ = { depth: null, breakLength: Infinity, ...opts };
   const errors = [];
   let msg;
 
   // This will fail if [inspect.custom]() is borked for some type in the tree
   try {
-    msg = inspect(what, opts);
+    msg = inspect(what, opts_);
   } catch (e) {
     errors.push(e);
   }
@@ -84,7 +146,7 @@ const tryInspect = (what, opts) => {
   // This will still fail if the class name of some type in the tree is borked
   try {
     // Maybe error was because of custom inspect?
-    msg = isdef(msg) ? msg : inspect(what, { ...opts, customInspect: false });
+    msg = isdef(msg) ? msg : inspect(what, { ...opts_, customInspect: false });
   } catch (e) {
     errors.push(e);
   }
@@ -92,10 +154,10 @@ const tryInspect = (what, opts) => {
   // Log that we encountered errors during inspecting after we printed
   // this
   exec(async () => {
-    if (!opts.recursiveErrorHandling && errors.length > 0) {
+    if (!opts_.recursiveErrorHandling && errors.length > 0) {
       await new Promise((res) => setImmediate(res));
       for (const e of errors) {
-        const ser = tryInspect(e, { ...opts, recursiveErrorHandling: true });
+        const ser = tryInspect(e, { ...opts_, recursiveErrorHandling: true });
         error(`Error while inspecting object for log message: ${ser}`);
       }
     }
@@ -105,30 +167,34 @@ const tryInspect = (what, opts) => {
 };
 
 /**
- * @callback MessageFormatter
- * @param {Array} msg – Parameters as you would pass them to console.log
- * @param {Object} opts – Formatting options.
- */
-
-/**
- * This is a useful helper function that turns a message containing
- * arbitrary objects (like you would hand to console.log) into a string.
+ * Turns the message field into a string.
  *
- * Leaves strings as is; uses `require('util').inspect(...)` on all other
- * types and joins the parameters using space:
- *
- * Loggers writing to raw streams or to strings usually use this, however
- * not all loggers require this; e.g. in a browser environment
- * console.warn/log/error should be used as these enable the use of the
- * visual object inspectors, at least in chrome and firefox.
- *
- * @type MessageFormatter
- * @param {Array} msg – Parameters as you would pass them to console.log
- * @param {Object} opts – Parameters are forwarded to util.inspect().
- *   By default `{depth: null, breakLength: Infinity, colors: false}` is used.
+ * @function
+ * @param {*[]|undefined} msg – Message components to serialize
+ * @param {Object} opts – Parameters are forwarded to tryInspect()
  * @returns {string}
  */
-const serializeMessage = (msg, opts) => msg.map((v) => (typeof (v) === 'string' ? v : tryInspect(v, opts))).join(' ');
+const serializeMessage = (msg, opts = {}) =>
+  (!msg ? '' : msg.map((v) => (typeof (v) === 'string' ? v : tryInspect(v, opts))).join(''));
+
+/**
+ * Most loggers take a message with `log()`, encode it and write it to some
+ * external resource.
+ *
+ * E.g. most Loggers (like ConsoleLogger, FileLogger, ...) write to a text
+ * oriented resource, so the message needs to be converted to text. This is
+ * what the formatter is for.
+ *
+ * Not all Loggers require text; some are field oriented (working with json
+ * compatible data), others like the MemLogger can handle arbitrary javascript
+ * objects, but still provide an optional formatter (in this case defaulted to
+ * the identity function – doing nothing) in case the user explicitly wishes
+ * to perform formatting.
+ *
+ * @callback MessageFormatter
+ * @param {Message} fields
+ * @returns {Unknown} Whatever kind of type the Logger needs. Usually a string.
+ */
 
 /**
  * Simple message format: Serializes the message and prefixes it with
@@ -137,16 +203,16 @@ const serializeMessage = (msg, opts) => msg.map((v) => (typeof (v) === 'string' 
  * This is used by the MemLogger by default for instance, because it is relatively
  * easy to test with and contains no extra info.
  *
+ * @function
  * @type MessageFormatter
- * @param {Array} msg – Parameters as you would pass them to console.log
- * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
- *
- *   - level: one of the log levels; this parameter is required.
+ * @param {Message} fields
+ * @return {string}
  */
-const messageFormatSimple = (msg, opts) => {
-  /* istanbul ignore next */
-  const { level = 'info', ...serialzeOpts } = opts || {};
-  return `[${level.toUpperCase()}] ${serializeMessage(msg, serialzeOpts)}`;
+const messageFormatSimple = (fields) => {
+  // eslint-disable-next-line
+  const { level, timestamp, message, ...rest } = fields;
+  const full = empty(rest) ? message : [...message, ' ', rest];
+  return `[${level.toUpperCase()}] ${serializeMessage(full)}`;
 };
 
 /**
@@ -155,21 +221,22 @@ const messageFormatSimple = (msg, opts) => {
  * This is used by FileLogger by default for instance because if you
  * work with many log files you need that sort of info.
  *
+ * @function
  * @type MessageFormatter
- * @param {Array} msg – Parameters as you would pass them to console.log
- * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
- *
- *   - level: one of the log levels; this parameter is required.
+ * @param {Message} fields
+ * @returns {string}
  */
-const messageFormatTechnical = (msg, opts) => {
-  /* istanbul ignore next */
-  const { level = 'info', ...serialzeOpts } = opts || {};
+const messageFormatTechnical = (fields) => {
+  const {
+    level, timestamp, message, ...rest
+  } = fields;
   const digit = (v, n) => {
     const num = String(v);
     const pref = join(take(repeat('0'), n - size(num)), '');
     return pref + num;
   };
-  const d = new Date();
+
+  const d = timestamp;
   const tz = d.getTimezoneOffset();
   /* istanbul ignore next */
   const pref = [ // [LEVEL YYYY-MM-DD hh:mm:ss.millis +tzh:tzm]
@@ -178,7 +245,9 @@ const messageFormatTechnical = (msg, opts) => {
     `${digit(d.getHours(), 2)}:${digit(d.getMinutes(), 2)}:${digit(d.getSeconds(), 2)}.${digit(d.getMilliseconds(), 3)}`,
     `${tz > 0 ? '+' : '-'}${digit(abs(floor(tz / 60)), 2)}:${digit(abs(tz % 60), 2)}`,
   ];
-  return `[${join(pref, ' ')}] ${serializeMessage(msg, serialzeOpts)}`;
+
+  const fullMsg = empty(rest) ? message : [...message, ' ', rest];
+  return `[${join(pref, ' ')}] ${serializeMessage(fullMsg)}`;
 };
 
 /**
@@ -186,17 +255,16 @@ const messageFormatTechnical = (msg, opts) => {
  *
  * Designed for use in terminals.
  *
+ * @function
  * @type MessageFormatter
- * @param {Array} msg – Parameters as you would pass them to console.log
- * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
- *
- *   - level: one of the log levels; this parameter is required.
+ * @param {Message} fields
+ * @returns {string}
  */
-const messageFormatConsole = (msg, opts) => {
-  /* istanbul ignore next */
-  const { level = 'info', ...serialzeOpts } = opts || {};
-
-  const ser = serializeMessage(msg, { colors: true, ...serialzeOpts });
+const messageFormatConsole = (fields) => {
+  // eslint-disable-next-line
+  const { level, timestamp, message, ...rest } = fields;
+  const fullMsg = empty(rest) ? message : [...message, ' ', rest];
+  const ser = serializeMessage(fullMsg, { colors: true });
   const pref = `[${level.toUpperCase()}]`;
 
   if (level === 'info') {
@@ -219,100 +287,99 @@ const messageFormatConsole = (msg, opts) => {
 };
 
 /**
- * Message format that produces json.
+ * Use jsonifyForLog to turn the fields into something that
+ * can be converted to json.
  *
- * Designed for structured logging; e.g. Loggly.
- *
- * This produces an object that can be converted to JSON. It does not
- * produce a string, but you can easily write an adapter like so:
- *
- * ```
- * const messageFormatJsonString = (...args) =>
- *    JSON.stringify(messageFormatJson(...args));
- * ```
- *
- * You can also wrap this to provide extra default fields:
- *
- * ```
- * const messageFormatMyJson = (...args) => {
- *    pid: process.pid,
- *    ...JSON.stringify(messageFormatJson(...args)),
- * }
- * ```
- *
- * If the last element in the message can be converted to json-like using
- * jsonifyForLog, then all the resulting fields will be included in the json-like
- * object generated.
- *
- * The field `message` is reserved. The fields `level` and `timestamp` are filled with
- * default values.
- *
- * If the last object is an exception, it will be sent as { exception: $exception };
- * this serves to facilitate searching for exceptions explicitly.
- *
+ * @function
  * @type MessageFormatter
- * @param {Array} msg – Parameters as you would pass them to console.log
- * @param {Object} opts – Parameters are forwarded to serializeMessage; other than that:
- *
- *   - level: one of the log levels; this parameter is required.
+ * @param {Message} fields
+ * @returns {Object}
  */
-const messageFormatJson = (msg, opts) => {
-  /* istanbul ignore next */
-  const { level = 'info', ...serialzeOpts } = opts || {};
+const messageFormatJson = ({ message, ...fields }) => jsonifyForLog({
+  message: serializeMessage(message),
+  ...fields,
+});
 
-  let data = {};
+/**
+ * Message format that produces & serialize json.
+ *
+ * Really just an alias for `JSON.stringify(messageFormatJson(fields))`.
+ *
+ * @function
+ * @type MessageFormatter
+ * @param {Message} fields
+ * @returns {Object}
+ */
+const messageFormatJsonString = (fields) => JSON.stringify(messageFormatJson(fields));
 
-  const setReserved = (name, val) => {
-    /* istanbul ignore next */
-    if (name in data) {
-      error("Can't log the", name, 'field using the json formatter. It is a reserved field!');
-    }
-    data[name] = val;
-  };
-
-  // Try encoding the last item as json; provided there is a last
-  // item; it is not a string and it can be encoded as json.
-  if (!empty(msg) && type(last(msg)) !== String) {
-    let lst = last(msg);
-
-    // Exceptions are encoded as the exception field in json
-    if (lst instanceof Error) {
-      lst = { exception: lst };
-    }
-
-    // Try json encoding the field; if this is supported
+/**
+ * Helper to wrap any block of code and handle it's async & sync exceptions.
+ *
+ * This will catch any exceptions/promise rejections and log them using the rootLogger.
+ *
+ * @function
+ * @package
+ * @param {Object} errorFields Fields to set in any error message (usually
+ *   indicates which logger was used)
+ * @param {Function} code The code to wrap
+ * @returns {Message}
+ */
+const __handleLoggingExceptions = (fields, logger, code) => {
+  exec(async () => {
     try {
-      lst = jsonifyForLog(lst);
-    } catch (er) {
-      lst = undefined;
-      /* istanbul ignore next */
-      if (!(er instanceof TraitNotImplemented)) {
-        throw er;
+      await code();
+    } catch (e) {
+      const errorMsg = 'Encountered exception while logging!';
+      // Debounce error messages
+      if (!fields.message || !eq(fields.message, [errorMsg])) {
+        // Defer logging the error (useful with multi logger so all messages
+        // are logged before the errors are logged)
+        await new Promise((res) => setImmediate(res));
+        error.fields(errorMsg, {
+          exception: e,
+          logger,
+        });
       }
     }
-
-    // Was successful
-    if (type(lst) === Object) {
-      data = lst;
-      msg = list(take(msg, size(msg) - 1));
-    }
-  }
-
-  setdefault(data, 'timestamp', new Date());
-  setdefault(data, 'level', level);
-
-  if (!empty(msg)) {
-    setReserved('message', serializeMessage(msg, serialzeOpts));
-  }
-
-  return data;
+  });
 };
 
 /**
+ * Loggers are used to write log message.
  *
- * Uses a fairly simple interface to avoid complexity for use cases in
- * which is not required. Can be used to dispatch logging to more
- * elaborate libraries. E.g. a logger using winston could be constructed like this:
+ * These receive a message via their log() method and forward
+ * the message to some external resource or other loggers in
+ * the case of MultiLogger.
+ *
+ * Loggers MUST provide a `log(message)` method accepting log messages.
+ *
+ * Loggers SHOULD provide a constructor that can accept options as
+ * the last argument `new MyLogger(..args, { ...options })`;
+ *
+ * Loggers MAY support any arguments or options in addition to the ones
+ * described here.
+ *
+ * Loggers SHOULD NOT throw exceptions; instead they should log an error.
+ *
+ * Loggers MUST use the optional fields & named options described in this
+ * interface either as specified here, or not at all.
+ *
+ * Loggers SHOULD provide a named constructor option 'level' and associated field
+ * that can be used to limit logging to messages to those with a sufficiently
+ * high log level.
+ *
+ * Loggers SHOULD provide a named constructor option 'filter' and associated field
+ * that can be used to transform messages arbitrarily. This option should default to
+ * the `identity()` function from ferrum. If the filter returns `undefined`
+ * the message MUST be discarded.
+ *
+ * If loggers send messages to some external resource not supporting the Message
+ * format, they SHOULD also provide an option 'formatter' and associated field
+ * that is used to produce the external format. This formatter SHOULD be set
+ * to a sane default.
+ *
+ * Helix-log provides some built-in formatters e.g. for plain text, json and
+ * for consoles supporting ANSI escape sequences.
  *
  * @interface Logger
  */
@@ -329,76 +396,144 @@ const messageFormatJson = (msg, opts) => {
  * still catch any errors and handle them appropriately.
  *
  * @method
- * @name Logger#log
- * @param {Array} msg The message; list of arguments as you would pass it to console.log
- * @param {Object} opts – Configuration object; contains only one key at
- *   the moment: `level` - The log level which can be one of `error, warn,
- *   info, verbose` and `debug`.
+ * @memberOf Logger#
+ * @name log
+ * @param {Message} fields
  */
 
 /**
- * Logger that is especially designed to be used in node.js.
+ * Can be used as a base class/helper for implementing loggers.
  *
- * Print's to stderr; Marks errors, warns & debug messages
- * with a colored `[ERROR]`/... prefix. Uses `inspect` to display
- * all non-strings.
+ * This will first apply the filter, drop the message if the level is
+ * too low or if the filter returned undefined and will then call the
+ * subclass provided this._logImpl function for final processing.
  *
- * @implements Logger
+ * This also wraps the entire logging logic into a promise enabled/async
+ * error handler that will log any errors using the rootLogger.
+ *
+ * @example
+ * ```
+ * class MyConsoleLogger extends LoggerBase {
+ *   _logImpl(fields) {
+ *     console.log(fields);
+ *   }
+ * }
+ * ```
+ *
  * @class
- * @param {Object} opts – Configuration object. All other options are forwarded to the formatter.
- * @param {string} [opts.level=info] The minimum log level
- * @param {Writable} [opts.stream=console._stderr] A writable stream to log to.
- * @param {MessageFormatter} [opts.formatter=messageFormatConsole] A formatter producing strings
+ * @param {Object} opts – Optional, named parameters
+ * @param {string} [opts.level='silly'] The minimum log level to sent to loggly
+ * @param {Function} [opts.filter=identity] Will be given every log message to perform
+ *   arbitrary transformations; must return either another valid message object or undefined
+ *   (in which case the message will be dropped).
  */
-class ConsoleLogger {
+class LoggerBase {
   /**
    * The minimum log level for messages to be printed.
    * Feel free to change to one of the available levels.
-   * @memberOf ConsoleLogger#
+   * @memberOf LoggerBase#
    * @member {string} level
    */
 
   /**
+   * Used to optionally transform all messages.
+   * Takes a message and returns a transformed message
+   * or undefined (in which case the message will be dropped).
+   * @memberOf LoggerBase#
+   * @member {Function} filter
+   */
+
+  constructor({ level = 'silly', filter = identity, ...unknown } = {}) {
+    assign(this, { level, filter });
+    if (!empty(unknown)) {
+      throw new Error(`Unknown named options given to ${typename(type(this))}: ${tryInspect(unknown)}`);
+    }
+  }
+
+  // Private: Code sharing with FormattedLoggerBase
+  __logWithFormatter(fields_, formatter) {
+    __handleLoggingExceptions(fields_, this, async () => {
+      const fields = this.filter(fields_);
+      if (fields !== undefined && numericLogLevel(fields.level) <= numericLogLevel(this.level)) {
+        if (formatter === undefined) { // LoggerBase impl
+          return this._logImpl(fields);
+        } else { // FormattedLoggerBase impl
+          return this._logImpl(this.formatter(fields), fields);
+        }
+      }
+    });
+  }
+
+  log(fields) {
+    return this.__logWithFormatter(fields, undefined);
+  }
+}
+
+/**
+ * Can be used as a base class/helper for implementing loggers that
+ * require a formatter.
+ *
+ * Will do the same processing as `LoggerBase` and in addition call
+ * the formatter before invoking _logImpl.
+ *
+ * @example
+ * ```
+ * class MyConsoleLogger extends FormattedLoggerBase {
+ *   _logImpl(payload, fields) {
+ *     console.log(`[${fields.level}]`, payload);
+ *   }
+ * }
+ * ```
+ *
+ * @class
+ * @param {Function} [opts.formatter] In addition to the filter, the formatter
+ *   will be used to convert the message into a format compatible with
+ *   the external resource.
+ */
+class FormattedLoggerBase extends LoggerBase {
+  /**
    * Formatter used to format all the messages.
-   * Must yield an object suitable for passing to JSON.serialize
-   * Feel free to mutate or exchange.
-   * @memberOf ConsoleLogger#
+   * Must yield an object suitable for the external resource
+   * this logger writes to.
+   * @memberOf FormattedLoggerBase#
    * @member {MessageFormatter} formatter
    */
 
-  /**
-   * Options that will be passed to the formatter;
-   * Feel free to mutate or exchange.
-   * @memberOf ConsoleLogger#
-   * @member {object} fmtOpts
-   */
+  constructor({ formatter = identity, ...opts } = {}) {
+    super(opts);
+    assign(this, { formatter });
+  }
 
+  log(fields) {
+    this.__logWithFormatter(fields, this.formatter);
+  }
+}
+
+/**
+ * Logger that is especially designed to be used in node.js
+ * Print's to stderr; Marks errors, warns & debug messages
+ * with a colored `[ERROR]`/... prefix.
+ *
+ * Formatter MUST produce strings. Default formatter is messageFormatConsole.
+ *
+ * @implements Logger
+ * @class
+ *@param {Writable} [opts.stream=console._stderr] A writable stream to log to.
+ */
+class ConsoleLogger extends FormattedLoggerBase {
   /**
-   * Writable stream that is used to write the log messages to.
+   * Writable stream to write log messages to. Usually console._stderr.
    * @memberOf ConsoleLogger#
    * @member {Writable} stream
    */
 
-  /* istanbul ignore next */
-  constructor(opts = {}) {
-    /* istanbul ignore next */
-    const {
-      level = 'info', stream = console._stderr, formatter = messageFormatConsole, ...fmtOpts
-    } = opts;
-    assign(this, {
-      level, formatter, fmtOpts, stream,
-    });
+  constructor({ stream = console._stderr, ...rest } = {}) {
+    super({ formatter: messageFormatConsole, ...rest });
+    assign(this, { stream });
   }
 
-  /* istanbul ignore next */
-  log(msg, opts = {}) {
-    // Defensive coding: Putting the entire function in try-catch
-    // clauses to avoid any sorts of exceptions leaking
-    /* istanbul ignore next */
-    const { level = 'info' } = opts || {};
-    if (numericLogLevel(level) <= numericLogLevel(this.level)) {
-      this.stream.write(`${this.formatter(msg, { ...this.fmtOpts, level })}\n`);
-    }
+  _logImpl(str) {
+    this.stream.write(`${str}\n`);
   }
 }
 
@@ -432,9 +567,10 @@ class ConsoleLogger {
  *
  * @implements Logger
  * @class
+ * @parameter {Sequence<Loggers>} loggers – The loggers to forward to.
  */
-class MultiLogger {
-  /**
+class MultiLogger extends LoggerBase {
+  /*
    * The list of loggers this is forwarding to. Feel free to mutate
    * or replace.
    *
@@ -442,29 +578,19 @@ class MultiLogger {
    * @member {Map<Logger>} loggers
    */
 
-  constructor(loggers) {
+  constructor(loggers, opts = {}) {
+    super(opts);
     this.loggers = dict(loggers);
   }
 
-  /* istanbul ignore next */
-  log(msg, opts = undefined) {
-    each(this.loggers, async ([name, sub]) => {
-      // We wrap each logging in separate try/catch blocks so exceptions
-      // on one logger are isolated from jumping over to other loggers
-      try {
-        await sub.log(msg, opts);
-      } catch (err) {
-        const metaErr = 'MultiLogger encountered exception while logging to';
-        // This prevents recursively triggering errors again and again
-        if (msg[0] !== metaErr) {
-          // Try actually logging the message before printing the errors
-          // at least for loggers that are not async
-          await new Promise((res) => setImmediate(res));
-          // Defensive coding: Not printing the message here because the message
-          // may have triggered the exception…
-          error(metaErr, name, '-', sub, ': ', err);
+  _logImpl(fields) {
+    each(this.loggers, ([_name, sub]) => {
+      __handleLoggingExceptions(fields, sub, async () => {
+        await sub.log(fields);
+        if (this === rootLogger) {
+          __globalLogImpl.fwdCount += 1;
         }
-      }
+      });
     });
   }
 }
@@ -479,62 +605,28 @@ class MultiLogger {
  * to files, for sockets, pipes and ttys this might block the process for a considerable
  * time.
  *
+ * Formatter MUST produce strings. Default formatter is messageFormatTechnical.
+ *
  * @class
  * @implements Logger
- * @param {string|number} name - The path of the file to log to
+ * @param {string|Integer} name - The path of the file to log to
  *   OR the unix file descriptor to log to.
- * @param {Object} opts – Configuration object. All other options are forwarded to the formatter.
- * @param {string} [opts.level=info] The minimum log level
- * @param {MessageFormatter} [opts.formatter=messageFormatTechnical] A formatter producing strings
  */
-class FileLogger {
+class FileLogger extends FormattedLoggerBase {
   /**
    * The underlying operating system file descriptor.
    * @memberOf FileLogger#
-   * @member {number} fd
+   * @member {Integer} fd
    */
 
-  /**
-   * The minimum log level for messages to be printed.
-   * Feel free to change to one of the available levels.
-   * @memberOf FileLogger#
-   * @member {string} level
-   */
-
-  /**
-   * Formatter used to format all the messages.
-   * Must yield an object suitable for passing to JSON.serialize
-   * Feel free to mutate or exchange.
-   * @memberOf FileLogger#
-   * @member {MessageFormatter} formatter
-   */
-
-  /**
-   * Options that will be passed to the formatter;
-   * Feel free to mutate or exchange.
-   * @memberOf FileLogger#
-   * @member {object} fmtOpts
-   */
-
-  /* istanbul ignore next */
   constructor(name, opts = {}) {
-    /* istanbul ignore next */
-    const { level = 'info', formatter = messageFormatTechnical, ...fmtOpts } = opts;
+    super({ formatter: messageFormatTechnical, ...opts });
     const fd = type(name) === Number ? name : openSync(name, 'a');
-    assign(this, {
-      fd, level, formatter, fmtOpts,
-    });
+    assign(this, { fd });
   }
 
-  /* istanbul ignore next */
-  log(msg, opts = {}) {
-    /* istanbul ignore next */
-    const { level = 'info' } = opts || {};
-    if (numericLogLevel(level) > numericLogLevel(this.level)) {
-      return;
-    }
-
-    writeSync(this.fd, `${this.formatter(msg, { ...this.fmtOpts, level })}\n`);
+  _logImpl(str) {
+    writeSync(this.fd, `${str}\n`);
   }
 
   close() {
@@ -545,68 +637,243 @@ class FileLogger {
 /**
  * Logs messages to an in-memory buffer.
  *
+ * Formatter can be anything; default just logs the messages as-is.
+ *
  * @class
  * @implements Logger
- * @class
- * @param {Object} opts – Configuration object. All other options are forwarded to the formatter.
- * @param {string} [opts.level=info] The minimum log level
- * @param {MessageFormatter} [opts.formatter=messageFormatSimple] A formatter any format.
  */
-class MemLogger {
+class MemLogger extends FormattedLoggerBase {
   /**
-   * The buffer that stores all separate, formatted log messages.
+   * An array that holds all the messages logged thus far.
+   * May be modified An array that holds all the messages logged thus far.
+   * May be modified.
    * @memberOf MemLogger#
    * @member {Array} buf
    */
 
-  /**
-   * The minimum log level for messages to be printed.
-   * Feel free to change to one of the available levelsformatter
-   * @memberOf MemLogger#
-   * @member {string} level
-   */
-
-  /**
-   * Formatter used to format all the messages.
-   * Must yield an object suitable for passing to JSON.serialize
-   * Feel free to mutate or exchange.
-   * @memberOf MemLogger#
-   * @member {MessageFormatter} formatter
-   */
-
-  /**
-   * Options that will be passed to the formatter;
-   * Feel free to mutate or exchange.
-   * @memberOf MemLogger#
-   * @member {Object} fmtOpts
-   */
-
-  /* istanbul ignore next */
   constructor(opts = {}) {
-    /* istanbul ignore next */
-    const { level = 'info', formatter = messageFormatSimple, ...fmtOpts } = opts;
-    assign(this, {
-      level, formatter, fmtOpts, buf: [],
-    });
+    super(opts);
+    assign(this, { buf: [] });
   }
 
-  /* istanbul ignore next */
-  log(msg, opts = {}) {
-    /* istanbul ignore next */
-    const { level = 'info' } = opts || {};
-    if (numericLogLevel(level) <= numericLogLevel(this.level)) {
-      this.buf.push(this.formatter(msg, { ...this.fmtOpts, level }));
-    }
+  _logImpl(payload) {
+    this.buf.push(payload);
   }
 }
 
 /**
+ * Helix-Log LoggingInterfaces take messages as defined by some external interface,
+ * convert them to the internal Message format and forward them to a logger.
+ *
+ * Some use cases include:
+ *
+ * - Providing a Console.log/warn/error compatible interface
+ * - Providing winston or bunyan compatible logging API
+ * - Providing a backend for forwarding bunyan or winston logs to helix log
+ * - Receiving log messages over HTTP
+ * - SimpleInterface and SimpleInterface are used to provide the
+ *   `info("My", "Message")` and `info.fields("My", "Message", { cutsom: "fields" })`
+ *   interfaces.
+ *
+ * LoggingInterfaces SHOULD provide a constructor that can accept options as
+ * the last argument `new MyInterface(..args, { ...options })`;
+ *
+ * LoggingInterfaces MAY support any arguments or options in addition to the ones
+ * described here.a
+ *
+ * LoggingInterfaces MUST use the optional fields & named options described in this
+ * LoggingInterface either as specified here, or not at all.
+ *
+ * LoggingInterfaces SHOULD NOT throw exceptions; instead they should log errors using
+ * the global logger.
+ *
+ * LoggingInterfaces SHOULD provide a named constructor option/field 'logger' that indicates
+ * which destination logs are sent to. This option SHOULD default to the rootLogger.
+ *
+ * LoggingInterfaces SHOULD provide a named constructor option 'level' and associated field
+ * that can be used to limit logging to messages to those with a sufficiently
+ * high log level.
+ *
+ * LoggingInterfaces SHOULD provide a named constructor option 'filter' and associated field
+ * that can be used to transform messages arbitrarily. This option should default to
+ * the `identity()` function from ferrum. If the filter returns `undefined`
+ * the message MUST be discarded.
+ *
+ * @interface LoggingInterface
+ */
+
+/**
+ * Can be used as a base class/helper for implementing logging interfaces.
+ *
+ * This will make sure that all the required fields are set to their
+ * default value, apply the filter, drop the message if the level is
+ * too low or if the filter returned undefined and will then forward
+ * the message to the logger configured.
+ *
+ * This also wraps the entire logging logic into a promise enabled/async
+ * error handler that will log any errors using the rootLogger.
+ *
+ * @example
+ * ```
+ * class MyTextInterface extends InterfaceBase {
+ *   logText(str) {
+ *     this._logImpl({ message: [str] });
+ *   }
+ * };
+ *
+ * const txt = new MyTextInterface({ logger: rootLogger });
+ * txt.logText("Hello World");
+ * ```
+ *
+ * @class
+ * @param {Object} opts – Optional, named parameters
+ * @param {string} [opts.level='silly'] The minimum log level to sent to loggly
+ * @param {Function} [opts.filter=identity] Will be given every log message to perform
+ *   arbitrary transformations; must return either another valid message object or undefined
+ *   (in which case the message will be dropped).
+ */
+class InterfaceBase {
+  constructor({
+    logger = rootLogger, level = 'silly', filter = identity, ...unknown
+  } = {}) {
+    assign(this, { logger, level, filter });
+    if (!empty(unknown)) {
+      throw new Error(`Unknown named options given to ${typename(type(this))}: ${tryInspect(unknown)}`);
+    }
+  }
+
+  _logImpl(fields_) {
+    __handleLoggingExceptions(fields_, this.logger, async () => {
+      const fields = this.filter(makeLogMessage(fields_));
+      if (fields !== undefined && numericLogLevel(fields.level) <= numericLogLevel(this.level)) {
+        await this.logger.log(fields);
+      }
+    });
+  }
+}
+
+/**
+ * The fields interface provides the ability to conveniently
+ * specify both a message and custom fields to the underlying logger.
+ *
+ * @example
+ * ```
+ * const { SimpleInterface } = require('helix-log');
+ *
+ * class log = new SimpleInterface();
+ * log.infoFields("Wubalubadubdub", {
+ *   drunk: true
+ * });
+ * log.errorFields("Nooez", { error: "Evil Morty!" });
+ * log.error("Nooez without custom fields");
+ * ```
+ *
+ * @class
+ * @implements LoggingInterface
+ */
+class SimpleInterface extends /* private */ InterfaceBase {
+  _logImpl(level, ...msg) {
+    const fields = msg.pop();
+    if (type(fields) !== Object) {
+      throw new Error('Data given as the last argument the helix-log '
+        + `SimpleInterface must be a plain Object, not a ${typename(type(fields))}.`);
+    }
+
+    const message = list(intersperse(msg, ' '));
+    super._logImpl({ message, level, ...fields });
+  }
+
+  /**
+   * The *Fields methods are used to log both a message
+   * custom fields to the underlying logger.
+   *
+   * The fields object must be present (and error will be thrown
+   * if the last element is not an object) and any fields specified
+   * take precedence over default values.
+   *
+   * @example
+   * ```
+   * const { SimpleInterface } = require('helix-log');
+   *
+   * const logger = new SimpleInterface();
+   *
+   * // Will throw an error because the fields object is missing.
+   * logger.verboseFields("Hello");
+   *
+   * // Will log a message 'Fooled!' with level error and the time
+   * // stamp set to the y2k (although it would be more customary
+   * // use logFields to indicate that the log level will be set through
+   * // the fields).
+   * sillyFields("Hello World", {
+   *   level: 'error',
+   *   timestamp: new Date("2000-01-01"),
+   *   message: ["Fooled!"]
+   * });
+   * ```
+   *
+   * @memberOf SimpleInterface#
+   * @method
+   * @alias sillyFields
+   * @alias traceFields
+   * @alias debugFields
+   * @alias verboseFields
+   * @alias infoFields
+   * @alias warnFields
+   * @alias errorFields
+   * @alias fatalFields
+   * @param {...*} msg The message to write
+   * @param {Object} fields
+   */
+  logFields(...msg) { this._logImpl('info', ...msg); }
+  sillyFields(...msg) { this._logImpl('silly', ...msg); }
+  traceFields(...msg) { this._logImpl('trace', ...msg); }
+  debugFields(...msg) { this._logImpl('debug', ...msg); }
+  verboseFields(...msg) { this._logImpl('verbose', ...msg); }
+  infoFields(...msg) { this._logImpl('info', ...msg); }
+  warnFields(...msg) { this._logImpl('warn', ...msg); }
+  errorFields(...msg) { this._logImpl('error', ...msg); }
+  fatalFields(...msg) { this._logImpl('fatal', ...msg); }
+
+  /**
+   * These methods are used to log just a message with no custom
+   * fields to the underlying logger; similar to console.log.
+   *
+   * This is not a drop in replacement for console.log, since this
+   * does not support string interpolation using `%O/%f/...`, but should
+   * cover most use cases.
+   *
+   * @memberOf SimpleInterface#
+   * @method
+   * @alias silly
+   * @alias trace
+   * @alias debug
+   * @alias verbose
+   * @alias info
+   * @alias warn
+   * @alias error
+   * @alias fatal
+   * @param {...*} msg The message to write
+   */
+  log(...msg) { this._logImpl('info', ...msg, {}); }
+  silly(...msg) { this._logImpl('silly', ...msg, {}); }
+  trace(...msg) { this._logImpl('trace', ...msg, {}); }
+  debug(...msg) { this._logImpl('debug', ...msg, {}); }
+  verbose(...msg) { this._logImpl('verbose', ...msg, {}); }
+  info(...msg) { this._logImpl('info', ...msg, {}); }
+  warn(...msg) { this._logImpl('warn', ...msg, {}); }
+  error(...msg) { this._logImpl('error', ...msg, {}); }
+  fatal(...msg) { this._logImpl('fatal', ...msg, {}); }
+}
+
+
+/**
  * The logger all other loggers attach to.
  *
- * Must always contain a logger named 'default'; it is very much reccomended
+ * Must always contain a logger named 'default'; it is very much recommended
  * that the default logger always be a console logger; this can serve as a good
  * fallback in case other loggers fail.
  *
+ * @example
  * ```js
  * // Change the default logger
  * rootLogger.loggers.set('default', new ConsoleLogger({level: 'debug'}));
@@ -622,94 +889,109 @@ const rootLogger = new MultiLogger({
   default: new ConsoleLogger({ level: 'info' }),
 });
 
-/**
- * Lot to the root logger; this is a wrapper around `rootLogger.log`
- * that handles exceptions thrown by rootLogger.log.
+let __globalRootLoggerWriteCount = 0;
+const __globalLogImpl = (lvl, ...msg) => {
+  let ex;
 
- * @function
- * @param {Array} msg – The message as you would hand it to console.log
- * @param {Object} opts – Any options you would pass to rootLogger.log
- */
-const logWithOpts = (msg, opts) => {
   try {
-    rootLogger.log(msg, opts);
-  } catch (er) {
-    console.error('Failed to log message:', ...msg);
-    console.error('Cause:', er);
+    __globalRootLoggerWriteCount = 0;
+    new SimpleInterface()._logImpl(lvl, ...msg);
+  } catch (e) {
+    ex = e;
+  }
+
+  if (ex !== undefined) {
+    console.error('Utter failure logging because:', tryInspect(ex));
+  }
+
+  const logFailure = ex !== undefined
+    || type(rootLogger.loggers) !== Map
+    || (__globalLogImpl.fwdCount === 0 && rootLogger.loggers.size === 0);
+  if (logFailure) {
+    console.error('Utter failure logging message:', serializeMessage(msg));
   }
 };
 
-/**
- * Uses the currently installed logger to print a fatal error-message
- * @function
- * @param {...*} msg – The message as you would hand it to console.log
- */
-const fatal = (...msg) => logWithOpts(msg, { level: 'fatal' });
+__globalLogImpl.fwdCount = 0;
 
 /**
- * Uses the currently installed logger to print an error-message
+ * Log just a message to the rootLogger using the SimpleInterface.
+ *
+ * Alias for `new SimpleInterface().log(...msg)`.
+ *
+ * This is not a drop in replacement for console.log, since this
+ * does not support string interpolation using `%O/%f/...`, but should
+ * cover most use cases.
+ *
  * @function
- * @param {...*} msg – The message as you would hand it to console.log
+ * @alias silly
+ * @alias trace
+ * @alias debug
+ * @alias verbose
+ * @alias info
+ * @alias warn
+ * @alias error
+ * @alias fatal
+ * @param {...*} msg The message to write
  */
-const error = (...msg) => logWithOpts(msg, { level: 'error' });
+const log = (...msg) => __globalLogImpl('log', ...msg, {});
+const fatal = (...msg) => __globalLogImpl('fatal', ...msg, {});
+const error = (...msg) => __globalLogImpl('error', ...msg, {});
+const warn = (...msg) => __globalLogImpl('warn', ...msg, {});
+const info = (...msg) => __globalLogImpl('info', ...msg, {});
+const verbose = (...msg) => __globalLogImpl('verbose', ...msg, {});
+const debug = (...msg) => __globalLogImpl('debug', ...msg, {});
+const trace = (...msg) => __globalLogImpl('trace', ...msg, {});
+const silly = (...msg) => __globalLogImpl('silly', ...msg, {});
 
 /**
- * Uses the currently installed logger to print a warn message
+ * Log to the rootLogger using the SimpleInterface with custom fields.
+ *
+ * Alias for `logFields(...msg)`.
+ *
  * @function
- * @param {...*} msg – The message as you would hand it to console.log
+ * @name log.fields
+ * @alias silly.fields
+ * @alias trace.fields
+ * @alias debug.fields
+ * @alias verbose.fields
+ * @alias info.fields
+ * @alias warn.fields
+ * @alias error.fields
+ * @alias fatal.fields
+ * @param {...*} msg The message to write
+ * @param {Object} fields
  */
-const warn = (...msg) => logWithOpts(msg, { level: 'warn' });
-
-/**
- * Uses the currently installed logger to print an informational message
- * @function
- * @param {...*} msg – The message as you would hand it to console.log
- * @alias log
- */
-const info = (...msg) => logWithOpts(msg, { level: 'info' });
-const log = info;
-
-/**
- * Uses the currently installed logger to print a verbose message
- * @function
- * @param {...*} msg – The message as you would hand it to console.log
- */
-const verbose = (...msg) => logWithOpts(msg, { level: 'verbose' });
-
-/**
- * Uses the currently installed logger to print a message intended for debugging
- * @function
- * @param {...*} msg – The message as you would hand it to console.log
- */
-const debug = (...msg) => logWithOpts(msg, { level: 'debug' });
-
-/**
- * Uses the currently installed logger to print a trace level message
- * @function
- * @param {...*} msg – The message as you would hand it to console.log
- */
-const trace = (...msg) => logWithOpts(msg, { level: 'trace' });
-
-/**
- * Uses the currently installed logger to print a silly level message
- * @function
- * @param {...*} msg – The message as you would hand it to console.log
- */
-const silly = (...msg) => logWithOpts(msg, { level: 'silly' });
+log.fields = (...msg) => __globalLogImpl('log', ...msg);
+fatal.fields = (...msg) => __globalLogImpl('fatal', ...msg);
+error.fields = (...msg) => __globalLogImpl('error', ...msg);
+warn.fields = (...msg) => __globalLogImpl('warn', ...msg);
+info.fields = (...msg) => __globalLogImpl('info', ...msg);
+verbose.fields = (...msg) => __globalLogImpl('verbose', ...msg);
+debug.fields = (...msg) => __globalLogImpl('debug', ...msg);
+trace.fields = (...msg) => __globalLogImpl('trace', ...msg);
+silly.fields = (...msg) => __globalLogImpl('silly', ...msg);
 
 module.exports = {
   numericLogLevel,
+  tryInspect,
   serializeMessage,
   messageFormatSimple,
   messageFormatTechnical,
   messageFormatConsole,
   messageFormatJson,
+  messageFormatJsonString,
+  makeLogMessage,
+  __handleLoggingExceptions,
+  LoggerBase,
+  FormattedLoggerBase,
   ConsoleLogger,
-  MultiLogger,
   FileLogger,
   MemLogger,
+  MultiLogger,
+  InterfaceBase,
+  SimpleInterface,
   rootLogger,
-  logWithOpts,
   fatal,
   error,
   info,
@@ -719,5 +1001,4 @@ module.exports = {
   debug,
   trace,
   silly,
-  tryInspect,
 };
