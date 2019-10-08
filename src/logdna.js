@@ -16,7 +16,7 @@ const { hostname } = require('os');
 const path = require('path');
 const phin = require('phin');
 const { iter } = require('ferrum');
-const { numericLogLevel, messageFormatJson } = require('./log');
+const { messageFormatJsonString, FormattedLoggerBase } = require('./log');
 const { Secret } = require('./secret');
 
 /* istanbul ignore next */
@@ -28,7 +28,9 @@ const _makeUrl = (url, opts) => {
   return String(o);
 };
 
-/*
+/**
+ * Sends log messages to the logdna logging service.
+ *
  * ## Future Direction
  *
  * For this sort of necessarily asynchronous logger, we could launch a second process
@@ -50,95 +52,60 @@ const _makeUrl = (url, opts) => {
  * @implements Logger
  * @param {string|Secret} apikey – Your logdna api key
  * @param {string} app – Name of the app under which the log messages should be categorized
- * @param {string} file – Name of the file / subsystem under which
- *   the log messages should be categorized
- * @param {Object} opts – Configuration object. Options are also forwarded to the formatter
- * @param {string} [opts.level=silly] The minimum log level to sent to logdna
- * @param {MessageFormatter} [opts.formatter=messageFormatJson] A formatter producing json
- * @param {string} [opts.host=<system hostname>] The hostname under which to categorize the messages
- * @param {string} [opts.apiurl=https://logs.logdna.com] where the logdna api is hosted.
+ * @param {string} file – Name of the file(/subsystem) under which the
+ *    log messages should be categorized
+ * @param {Object} opts
+ *
+ *   - `host`: Default is the system hostname; The hostname under which to categorize the messages
+ *   - `apiurl`: Default `https://logs.logdna.com`; The url under which the logdna api is hosted.
  */
-class LogdnaLogger {
+class LogdnaLogger extends FormattedLoggerBase {
   /**
-   * The minimum log level for messages to be printed.
-   * Feel free to change to one of the available levels.
+   * Name of the app under which the log messages should be categorized
    * @memberOf LogdnaLogger#
-   * @member {string} level
-   */
-
-  /**
-   * Formatter used to format all the messages.
-   * Must yield an object suitable for passing to JSON.serialize
-   * @memberOf LogdnaLogger#
-   * @member {Function} formatter
-   */
-
-  /**
-   * Options that will be passed to the formatter;
-   * Feel free to mutate or exchange.
-   * @memberOf LogdnaLogger#
-   * @member {object} fmtOpts
+   * @member {Secret} apikey
    */
 
   /**
    * Name of the app under which the log messages should be categorized
    * @memberOf LogdnaLogger#
-   * @member {String|Secret} apikey
-   */
-
-  /**
-   * Name of the app under which the log messages should be categorized
-   * @memberOf LogdnaLogger#
-   * @member {String} app
+   * @member {string} app
    */
 
   /**
    * The hostname under which to categorize the messages
    * @memberOf LogdnaLogger#
-   * @member {String} host
+   * @member {string} host
    */
 
   /**
    * The url under which the logdna api is hosted.
    * @memberOf LogdnaLogger#
-   * @member {String} apiurl
+   * @member {string} apiurl
    */
 
   /* istanbul ignore next */
   constructor(apikey, app, file, opts = {}) {
     const {
       /* istanbul ignore next */
-      level = 'silly',
-      /* istanbul ignore next */
-      formatter = messageFormatJson,
-      /* istanbul ignore next */
       host = hostname(),
       /* istanbul ignore next */
       apiurl = 'https://logs.logdna.com/',
-      ...fmtOpts
+      formatter = messageFormatJsonString,
+      ...rest
     } = opts;
+    super({ formatter, ...rest });
     assign(this, {
       apikey: new Secret(apikey),
       apiurl,
       app,
       file,
       host,
-      level,
-      formatter,
-      fmtOpts,
     });
   }
 
-  /* istanbul ignore next */
-  log(msg, opts = {}) {
-    /* istanbul ignore next */
-    const { level = 'info' } = opts || {};
-    if (numericLogLevel(level) > numericLogLevel(this.level)) {
-      return;
-    }
-
-    const now = new Date().getTime();
-    phin({
+  _logImpl(payload, fields) {
+    return phin({
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -146,15 +113,15 @@ class LogdnaLogger {
       url: _makeUrl(path.join(this.apiurl, 'logs/ingest'), {
         hostname: this.host,
         apikey: this.apikey.secret,
-        now,
+        now: fields.timestamp.getTime(),
       }),
       data: {
         lines: [{
-          line: JSON.stringify(this.formatter(msg, { ...this.fmtOpts, level })),
+          line: payload,
           app: this.app,
           file: this.file,
-          timestamp: now,
-          level,
+          timestamp: fields.timestamp.getTime(),
+          level: fields.level,
         }],
       },
     });

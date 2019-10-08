@@ -15,6 +15,7 @@
 
 const assert = require('assert');
 const { readFileSync } = require('fs');
+const { ckEq } = require('./util');
 
 it('singleton expule', () => {
   const key = 'helix-log-a8b81455-7074-4953-a769-82754b0eb756';
@@ -38,13 +39,28 @@ it('singleton expule', () => {
     assert(exp.ConsoleLogger === exp2.ConsoleLogger);
     assert(exp2.ConsoleLogger !== expLog2.ConsoleLogger);
   });
+  delete logged[0].timestamp;
 
   const pack = JSON.parse(readFileSync(`${__dirname}/../package.json`, { encoding: 'utf-8' }));
   const idxFile = require.resolve('../src/index');
 
-  const expectLog = '[WARN] Multiple versions of adobe/helix-log in the same process! '
-    + 'Using one loaded first! '
-    + `{ used: { version: '${pack.version}', filename: '${idxFile}' }, `
-    + `discarded: { version: '${pack.version}', filename: '${idxFile}' } }\n`;
-  assert.strictEqual(logged, expectLog);
+  const expectLog = [{
+    level: 'warn',
+    message: [
+      'Multiple versions of adobe/helix-log in the same process! Using one loaded first!',
+      ' ',
+      {
+        discarded: {
+          filename: idxFile,
+          version: pack.version,
+        },
+        used: {
+          filename: idxFile,
+          version: pack.version,
+        },
+      },
+    ],
+  }];
+
+  ckEq(logged, expectLog);
 });

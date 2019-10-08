@@ -17,7 +17,7 @@ const assert = require('assert');
 const { hostname } = require('os');
 const polka = require('polka');
 const { type, typename, empty } = require('ferrum');
-const { LogdnaLogger } = require('../src/logdna');
+const { LogdnaLogger, makeLogMessage } = require('../src');
 const {
   post, listenRandomPort, readAll, stop,
 } = require('./polka-promise');
@@ -90,12 +90,13 @@ it('LogdnaLogger', async () => {
 
     const logger = new LogdnaLogger(apikey, app, file, {
       apiurl: `http://localhost:${server.port}/`,
-      level: 'warn',
     });
 
     const t0 = new Date().getTime();
-    logger.log(['Hello', 42, 'World', { bar: 23 }], { level: 'silly' }); // should not be logged
-    logger.log(['Hello', 42, 'World', { bar: 23 }], { level: 'warn' });
+    logger.log(makeLogMessage({
+      message: ['Hello ', 42, ' World ', { bar: 23 }],
+      fnord: 42,
+    }));
 
     const { body, query } = await server.nextReq();
 
@@ -114,7 +115,7 @@ it('LogdnaLogger', async () => {
     assert((t3 - t0) < 10);
     ckEq(body, {
       lines: [{
-        level: 'warn',
+        level: 'info',
         app,
         file,
       }],
@@ -124,9 +125,9 @@ it('LogdnaLogger', async () => {
       hostname: hostname(),
     });
     ckEq(line, {
-      bar: 23,
-      level: 'warn',
-      message: 'Hello 42 World',
+      level: 'info',
+      message: 'Hello 42 World { bar: 23 }',
+      fnord: 42,
     });
   } finally {
     await server.stop();

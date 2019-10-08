@@ -14,7 +14,7 @@ const { assign } = Object;
 const { hostname } = require('os');
 const path = require('path');
 const phin = require('phin');
-const { numericLogLevel, messageFormatJson } = require('./log');
+const { messageFormatJsonString, FormattedLoggerBase } = require('./log');
 const { Secret } = require('./secret');
 
 const _logLevelMapping = {
@@ -28,7 +28,13 @@ const _logLevelMapping = {
   silly: 1,
 };
 
-/*
+/**
+ * Sends log messages to the coralogix logging service.
+ *
+ * The formatter must produce a string; since coralogix recognizes
+ * json encoded data in the log string, messageFormatJsonString is
+ * used by default.
+ *
  * ## Future Direction
  *
  * We may introduce batch processing of log messages to improve efficiency.
@@ -51,35 +57,10 @@ const _logLevelMapping = {
  * @param {string|Secret} apikey – Your coralogix api key
  * @param {string} app – Name of the app under which the log messages should be categorized
  * @param {string} subsystem – Name of the subsystem under which
- *   the log messages should be categorized
- * @param {Object} opts – Configuration object. Options are also forwarded to the formatter
- * @param {string} [opts.level=silly] The minimum log level to sent to coralogix
- * @param {MessageFormatter} [opts.formatter=messageFormatJson] A formatter producing json
- * @param {string} [opts.host=<system hostname>] The hostname under which to categorize the messages
- * @param {string} [opts.apiurl=https://api.coralogix.com/api/v1/] where the coralogix api can be found
+ * @param {string} [opts.host=os.hostname()] The hostname under which to categorize the messages
+ * @param {string} [opts.apiurl='https://api.coralogix.com/api/v1/']; where the coralogix api can be found; for testing; where the coralogix api can be found; for testing
  */
-class CoralogixLogger {
-  /**
-   * The minimum log level for messages to be printed.
-   * Feel free to change to one of the available levels.
-   * @memberOf CoralogixLogger#
-   * @member {string} level
-   */
-
-  /**
-   * Formatter used to format all the messages.
-   * Must yield an object suitable for passing to JSON.serialize
-   * @memberOf CoralogixLogger#
-   * @member {MessageFormatter} formatter
-   */
-
-  /**
-   * Options that will be passed to the formatter;
-   * Feel free to mutate or exchange.
-   * @memberOf CoralogixLogger#
-   * @member {object} fmtOpts
-   */
-
+class CoralogixLogger extends FormattedLoggerBase {
   /**
    * Name of the app under which the log messages should be categorized
    * @memberOf CoralogixLogger#
@@ -107,37 +88,23 @@ class CoralogixLogger {
   /* istanbul ignore next */
   constructor(apikey, app, subsystem, opts = {}) {
     const {
-      /* istanbul ignore next */
-      level = 'silly',
-      /* istanbul ignore next */
-      formatter = messageFormatJson,
-      /* istanbul ignore next */
       host = hostname(),
-      /* istanbul ignore next */
       apiurl = 'https://api.coralogix.com/api/v1/',
-      ...fmtOpts
+      formatter = messageFormatJsonString,
+      ...rest
     } = opts;
+    super({ formatter, ...rest });
     assign(this, {
       apikey: new Secret(apikey),
       apiurl,
       app,
       subsystem,
       host,
-      level,
-      formatter,
-      fmtOpts,
     });
   }
 
-  /* istanbul ignore next */
-  log(msg, opts = {}) {
-    /* istanbul ignore next */
-    const { level = 'info' } = opts || {};
-    if (numericLogLevel(level) > numericLogLevel(this.level)) {
-      return;
-    }
-
-    phin({
+  _logImpl(payload, fields) {
+    return phin({
       url: path.join(this.apiurl, '/logs'),
       method: 'POST',
       headers: {
@@ -149,9 +116,9 @@ class CoralogixLogger {
         subsystemName: this.subsystem,
         computerName: this.host,
         logEntries: [{
-          timestamp: new Date().getTime(),
-          text: JSON.stringify(this.formatter(msg, { ...this.fmtOpts, level })),
-          severity: _logLevelMapping[level],
+          timestamp: fields.timestamp.getTime(),
+          text: payload,
+          severity: _logLevelMapping[fields.level],
         }],
       },
     });

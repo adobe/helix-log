@@ -42,7 +42,7 @@ const post = (server, path, fn) => {
  *
  * @function
  * @param {Polka} server The polka instance
- * @param {Number} port
+ * @param {number} port
  * @returns {Promise} Emitted when the polka server has started to listen
  */
 const listen = async (server, port) => {
@@ -97,7 +97,7 @@ const listen = async (server, port) => {
  * Open an http server on a random port
  * @function
  * @param {Polka} server The polka instance
- * @returns {Promise<Number>} Port the server was opened on
+ * @returns {Promise<number>} Port the server was opened on
  */
 const listenRandomPort = async (server) => {
   while (true) {
@@ -146,7 +146,7 @@ const stop = async (server) => {
  * Read all data from a readable stream as a utf-8 string.
  * @function
  * @param {ReadableStream} stream
- * @returns {Promise<String>}
+ * @returns {Promise<string>}
  */
 const readAll = (stream) => new Promise((res, rej) => {
   const buf = [];

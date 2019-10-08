@@ -10,9 +10,8 @@
  * governing permissions and limitations under the License.
  */
 
-const { assign } = Object;
-const { type, isdef } = require('ferrum');
-const { rootLogger } = require('./log');
+const { type } = require('ferrum');
+const { InterfaceBase } = require('./log');
 
 /**
  * Bunyan stream that can be used to forward any bunyan messages
@@ -21,10 +20,10 @@ const { rootLogger } = require('./log');
  * @example
  * ```
  * const bunyan = require('bunyan');
- * const { BunyanInterface } = require('helix-log');
+ * const { BunyanStreamInterface } = require('helix-log');
  *
  * const logger = bunyan.createLogger({name: 'helixLogger'});
- * logger.addStream(BunyanInterface.createStream());
+ * logger.addStream(BunyanStreamInterface.createStream());
  * ```
  *
  * or
@@ -33,7 +32,7 @@ const { rootLogger } = require('./log');
  * const logger = bunyan.createLogger({
  *    name: 'helixLogger',
  *    streams: [
- *      BunyanInterface.createStream()
+ *      BunyanStreamInterface.createStream()
  *    ],
  * });
  * ```
@@ -46,16 +45,16 @@ const { rootLogger } = require('./log');
  *    streams: [
  *      {
  *        type: 'raw',
- *        stream: new BunyanInterface(rootLogger),
+ *        stream: new BunyanStreamInterface(rootLogger),
  *      };
  *    ],
  * });
  * ```
  *
- * @param {Logger} logger – The helix-log logger to…well…log to.
- *   If this is not given, the `rootLogger` will be used instead.
+ * @class
+ * @implements LoggingInterface
  */
-class BunyanInterface {
+class BunyanStreamInterface extends InterfaceBase {
   static createStream(...args) {
     return {
       type: 'raw',
@@ -63,25 +62,21 @@ class BunyanInterface {
     };
   }
 
-  constructor(logger) {
-    assign(this, { logger });
-  }
-
   write(payload) {
     if (type(payload) !== Object) {
-      throw new Error('BunyanInterface requires a raw stream. Please use `"type": "raw"` when setting up the bunyan stream.');
+      throw new Error('BunyanStreamInterface requires a raw stream. Please use `"type": "raw"` when setting up the bunyan stream.');
     }
 
     const {
       msg, time, level, ...fields
     } = payload;
-    const hlxFields = { timestamp: new Date(time), ...fields, bunyanLevel: level };
-    const hlxOpts = { level: this._bunyan2hlxLevel(level) };
-    this._helixLogger().log([msg, hlxFields], hlxOpts);
-  }
-
-  _helixLogger() {
-    return isdef(this.logger) ? this.logger : rootLogger;
+    this._logImpl({
+      ...fields,
+      message: [msg],
+      level: this._bunyan2hlxLevel(level),
+      bunyanLevel: level,
+      timestamp: new Date(time),
+    });
   }
 
   _bunyan2hlxLevel(lvl) {
@@ -103,4 +98,4 @@ class BunyanInterface {
   }
 }
 
-module.exports = { BunyanInterface };
+module.exports = { BunyanStreamInterface };

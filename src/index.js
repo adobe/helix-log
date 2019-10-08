@@ -16,13 +16,13 @@ const { exec, isdef } = require('ferrum');
 const pkgJson = require('../package.json');
 
 module.exports = {
+  ...require('./recording'),
   ...require('./log'),
   ...require('./serialize-json'),
   ...require('./coralogix'),
   ...require('./logdna'),
   ...require('./bunyan'),
   ...require('./secret'),
-  ...require('./recording'),
 };
 
 // Make this repo a singleton.

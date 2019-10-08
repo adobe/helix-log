@@ -10,9 +10,27 @@
  * governing permissions and limitations under the License.
  */
 
-const assert = require('assert');
-const { dict } = require('ferrum');
-const { rootLogger, MemLogger } = require('./log');
+const { dict, assertEquals } = require('ferrum');
+const { rootLogger, MemLogger, messageFormatJson } = require('./log');
+
+/**
+ * Message format used for comparing logs in tests.
+ *
+ * Pretty much just messageFormatJson, but removes the time stamp
+ * because that is hard to compare since it is different each time...
+ *
+ * If other highly variable fields are added in the future (e.g. id = uuidgen())
+ * these shall be removed too.
+ *
+ * @function
+ * @param {Message} fields
+ * @returns {Object}
+ */
+const messageFormatJsonStatic = (fields) => {
+  const r = messageFormatJson(fields);
+  delete r.timestamp;
+  return r;
+};
 
 /**
  * Record the log files with debug granularity while the given function is running.
@@ -21,20 +39,27 @@ const { rootLogger, MemLogger } = require('./log');
  * If this is not your desired behaviour, you can use the MemLogger
  * manually.
  *
+ * @example
  * ```
- * const { assertEquals } = require('ferrum');
- * const { recordLogs, info, err } = require('@adobe/helix-shared').log;
- *
- * const logs = recordLogs(() => {
- *   info('Hello World\n');
- *   err('Nooo')
+ * recordLogs(() => {
+ *   info('Hello World');
+ *   err('Nooo');
  * });
- * assertEquals(logs, 'Hello World\n[ERROR] Nooo');
  * ```
  *
+ * will return something like this:
+ *
+ * ```
+ * [
+ *   { level: 'info', message: 'Hello World', timestamp: '...' },
+ *   { level: 'error', message: 'Noo', timestamp: '...' }
+ * ]
+ * ```
+ *
+ * @function
  * @param {Object} opts – optional first parameter; options passed to MemLogger
  * @param {Function} fn - The logs that this code emits will be recorded.
- * @returns {String} The logs that where produced by the codee
+ * @returns {string} The logs that where produced by the codee
  */
 const recordLogs = (opts, fn) => {
   if (opts instanceof Function) {
@@ -49,56 +74,52 @@ const recordLogs = (opts, fn) => {
   } finally {
     rootLogger.loggers = backup;
   }
-  return `${logger.buf.join('\n')}\n`;
+
+  return logger.buf;
 };
 
 /**
  * Assert that a piece of code produces a specific set of log messages.
  *
+ * @example
  * ```
  * const { assertLogs, info, err } = require('@adobe/helix-shared').log;
  *
  * assertLogs(() => {
- *   info('Hello World\n');
- *   err('Nooo')
- * }, multiline(`
- *   Hello World
- *   [ERROR] Nooo
- * `));
+ *   info('Hello World');
+ *   err('Nooo');
+ * }, [
+ *   { level: 'info', message: 'Hello World' },
+ *   { level: 'error', message: 'Noo' }
+ * ]);
  * ```
  *
+ * @function
  * @param {Object} opts – optional first parameter; options passed to MemLogger
  * @param {Function} fn - The logs that this code emits will be recorded.
- * @param {String} logs
+ * @param {string} logs
  */
 const assertLogs = (opts, fn, logs) => {
   if (opts instanceof Function) {
     assertLogs({}, opts, fn);
   } else {
-    assert.strictEqual(recordLogs(opts, fn), logs);
+    assertEquals(
+      recordLogs({ formatter: messageFormatJsonStatic, ...opts }, fn),
+      logs,
+    );
   }
 };
 
 /**
  * Async variant of recordLogs.
  *
- * Note that using this is a bit dangerous;
+ * Note that using this is a bit dangerous as other async procedures
+ * may also emit log messages while this procedure is running
  *
- * ```
- * const { assertEquals } = require('ferrum');
- * const { recordAsyncLogs, info, err } = require('@adobe/helix-shared').log;
- *
- * const logs = await recordLogs(async () => {
- *   info('Hello World\n');
- *   await sleep(500);
- *   err('Nooo')
- * });
- * assertEquals(logs, 'Hello World\n[ERROR] Nooo');
- * ```
- *
+ * @function
  * @param {Object} opts – optional first parameter; options passed to MemLogger
  * @param {Function} fn - The logs that this code emits will be recorded.
- * @returns {String} The logs that where produced by the codee
+ * @returns {string} The logs that where produced by the code
  */
 const recordAsyncLogs = async (opts, fn) => {
   if (opts instanceof Function) {
@@ -113,37 +134,32 @@ const recordAsyncLogs = async (opts, fn) => {
   } finally {
     rootLogger.loggers = backup;
   }
-  return `${logger.buf.join('\n')}\n`;
+
+  return logger.buf;
 };
 
 /**
  * Async variant of assertLogs
  *
- * ```
- * const { assertAsyncLogs, info, err } = require('@adobe/helix-shared').log;
+ * Note that using this is a bit dangerous as other async procedures
+ * may also emit logs while this async procedure is running.
  *
- * await assertAsyncLogs(() => {
- *   info('Hello World\n');
- *   await sleep(500);
- *   err('Nooo')
- * }, multiline(`
- *   Hello World
- *   [ERROR] Nooo
- * `));
- * ```
- *
+ * @function
  * @param {Object} opts – optional first parameter; options passed to MemLogger
  * @param {Function} fn - The logs that this code emits will be recorded.
- * @param {String} logs
+ * @param {string} logs
  */
 const assertAsyncLogs = async (opts, fn, logs) => {
   if (opts instanceof Function) {
     await assertAsyncLogs({}, opts, fn);
   } else {
-    assert.strictEqual(await recordAsyncLogs(opts, fn), logs);
+    assertEquals(
+      await recordAsyncLogs({ formatter: messageFormatJsonStatic, ...opts }, fn),
+      logs,
+    );
   }
 };
 
 module.exports = {
-  recordLogs, assertLogs, recordAsyncLogs, assertAsyncLogs,
+  messageFormatJsonStatic, recordLogs, assertLogs, recordAsyncLogs, assertAsyncLogs,
 };

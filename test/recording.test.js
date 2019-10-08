@@ -14,41 +14,35 @@
 
 const assert = require('assert');
 const {
-  assertAsyncLogs, assertLogs, recordLogs, recordAsyncLogs,
-  info, verbose, error, rootLogger, ConsoleLogger,
+  assertAsyncLogs, assertLogs, recordLogs, recordAsyncLogs, info, warn,
+  verbose, error, rootLogger, ConsoleLogger, messageFormatSimple,
 } = require('../src');
 
 it('recordLogs, assertLogs', () => {
   // assertLogs: without opts, recordLogs: with opts
   assertLogs(() => {
     info('Hello World');
-    verbose('Foo');
-    error('Bar');
-  },
-  '[INFO] Hello World\n'
-    + '[ERROR] Bar\n');
+    verbose.fields('Foo', { x: 42 });
+  }, [
+    { level: 'info', message: 'Hello World' },
+    { level: 'verbose', message: 'Foo', x: 42 },
+  ]);
 
   // Default logger restored
   assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
 
   // assertLogs: with opts, recordLogs: with opts
-  assertLogs({ level: 'warn' }, () => {
+  assertLogs({ level: 'warn', formatter: messageFormatSimple }, () => {
     info('Hello World');
-    verbose('Foo');
+    warn.fields('Foo', { foo: 42 });
     error('Bar');
-  }, '[ERROR] Bar\n');
-  assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
+  }, [
+    '[WARN] Foo { foo: 42 }',
+    '[ERROR] Bar',
+  ]);
 
-  // recordLogs: with opts
-  const logs = recordLogs(() => {
-    info('Hello World');
-    verbose('Foo');
-    error('Bar');
-  });
+  // Default logger restored
   assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
-  assert.strictEqual(logs,
-    '[INFO] Hello World\n'
-    + '[ERROR] Bar\n');
 
   // Exception safety
   let ex;
@@ -64,35 +58,37 @@ it('recordLogs, assertLogs', () => {
 });
 
 it('recordAsyncLogs, assertAsyncLogs', async () => {
+  // assertLogs: without opts, recordLogs: with opts
   await assertAsyncLogs(async () => {
+    await new Promise((res) => setImmediate(res));
     info('Hello World');
     await new Promise((res) => setImmediate(res));
-    verbose('Foo');
+    verbose.fields('Foo', { x: 42 });
     await new Promise((res) => setImmediate(res));
-    error('Bar');
-  }, '[INFO] Hello World\n[ERROR] Bar\n');
+  }, [
+    { level: 'info', message: 'Hello World' },
+    { level: 'verbose', message: 'Foo', x: 42 },
+  ]);
+
+  // Default logger restored
   assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
 
-  await assertAsyncLogs({ level: 'warn' }, async () => {
+  // assertLogs: with opts, recordLogs: with opts
+  await assertAsyncLogs({ level: 'warn', formatter: messageFormatSimple }, async () => {
+    await new Promise((res) => setImmediate(res));
     info('Hello World');
     await new Promise((res) => setImmediate(res));
-    verbose('Foo');
+    warn.fields('Foo', { foo: 42 });
     await new Promise((res) => setImmediate(res));
     error('Bar');
-  }, '[ERROR] Bar\n');
+  }, [
+    '[WARN] Foo { foo: 42 }',
+    '[ERROR] Bar',
+  ]);
+
+  // Default logger restored
   assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
 
-  const logs = await recordAsyncLogs(async () => {
-    info('Hello World');
-    await new Promise((res) => setImmediate(res));
-    verbose('Foo');
-    await new Promise((res) => setImmediate(res));
-    error('Bar');
-  });
-  assert.strictEqual(logs,
-    '[INFO] Hello World\n'
-    + '[ERROR] Bar\n');
-  assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
 
   // Exception safety
   let ex;
