@@ -13,7 +13,10 @@
 /* eslint-env mocha */
 /* eslint-disable class-methods-use-this */
 
-const { each, typename, type } = require('ferrum');
+const { assign } = Object;
+const {
+  each, typename, type, dict,
+} = require('ferrum');
 const { URL } = require('url');
 const { JsonifyForLog, jsonifyForLog } = require('../src/serialize-json');
 const { ckEq } = require('./util');
@@ -46,6 +49,7 @@ describe('serialize-json', () => {
     delta: new Set([1, 'asd', {}, new URL('https://example.com/bar')]),
     epsilon: new CustomClass(),
     zeta: new CustomException('Hello World'),
+    eta: new CustomFallbackClass(),
   };
 
   const flatOut = {
@@ -72,6 +76,14 @@ describe('serialize-json', () => {
       message: 'Hello World',
       stack: flatInp.zeta.stack,
       code: undefined,
+    },
+    eta: {
+      $type: 'CustomFallbackClass',
+      foo: 42,
+      bar: {
+        $type: 'Map',
+        values: [['bar', 23]],
+      },
     },
   };
 

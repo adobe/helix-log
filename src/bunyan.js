@@ -14,6 +14,34 @@ const { type } = require('ferrum');
 const { InterfaceBase } = require('./log');
 
 /**
+ * Remove the default fields emitted by buyan.
+ *
+ * These fields are added by bunyan by default but are often not of
+ * much interest (like name, bunyanLevel, or `v`) or can be easily added
+ * again later for data based loggers where this information might be
+ * valuable (e.g. hostname, pid).
+ *
+ * Use like this:
+ *
+ * @example
+ * ```
+ * const bunyan = require('bunyan');
+ * const { BunyanStreamInterface, eraseBunyanDefaultFields } = require('helix-log');
+ *
+ * const logger = bunyan.createLogger({name: 'helixLogger'});
+ * logger.addStream(BunyanStreamInterface.createStream({
+ *   filter: eraseBunyanDefaultFields
+ * }));
+ * ```
+ *
+ * @function
+ * @param {Object} fields
+ * @returns {Object}
+ */
+// eslint-disable-next-line
+const eraseBunyanDefaultFields = ({ name, hostname, pid, bunyanLevel, v, ...rest }) => rest;
+
+/**
  * Bunyan stream that can be used to forward any bunyan messages
  * to helix log.
  *
@@ -98,4 +126,4 @@ class BunyanStreamInterface extends InterfaceBase {
   }
 }
 
-module.exports = { BunyanStreamInterface };
+module.exports = { eraseBunyanDefaultFields, BunyanStreamInterface };
