@@ -21,7 +21,7 @@ const {
 } = require('colorette');
 const {
   dict, exec, isdef, each, join, type, list, take, size, identity,
-  repeat, intersperse, typename, empty, eq,
+  repeat, intersperse, typename, empty, eq, pipe, map,
 } = require('ferrum');
 const { openSync, closeSync, writeSync } = require('fs');
 const { jsonifyForLog } = require('./serialize-json');
@@ -105,16 +105,26 @@ numericLogLevel.__loglevelMap = __loglevelMap;
 /**
  * Supplies default values for all the required fields in log messages.
  *
+ * You may pass this a message that is just a string (as opposed to the
+ * usually required array of message components). The message will then automatically
+ * be wrapped in an array.
+ *
  * @function
  * @param {Object} [fields={}] User supplied field values; can overwrite
  *   any default values
  * @returns {Message}
  */
-const makeLogMessage = (fields = {}) => ({
-  level: 'info',
-  timestamp: new Date(),
-  ...fields,
-});
+const makeLogMessage = (fields = {}) => {
+  const r = {
+    level: 'info',
+    timestamp: new Date(),
+    ...fields,
+  };
+  if ('message' in r) {
+    r.message = type(r.message) === Array ? r.message : [r.message];
+  }
+  return r;
+};
 
 /**
  * Wrapper around inspect that is extremely robust against errors
@@ -174,9 +184,26 @@ const tryInspect = (what, opts = {}) => {
  * @param {Object} opts – Parameters are forwarded to tryInspect()
  * @returns {string}
  */
-const serializeMessage = (msg, opts = {}) =>
-  (!msg ? '' : msg.map((v) => (typeof (v) === 'string' ? v : tryInspect(v, opts))).join(''));
+const serializeMessage = (msg, opts = {}) => {
+  if (msg === undefined) { // No message at all (which is OK!)
+    return '';
+  } else if (type(msg) === Array) { // Message is an array (as is proper)
+    return pipe(
+      msg,
+      map((v) => (type(v) === String ? v : tryInspect(v, opts))),
+      join(''),
+    );
+  } else {
+    // These are technically invalid, we still handle them gracefully and
+    // emit a warning.
 
+    warn.fields(`serializeMessage takes an array or undefined as message. Not ${typename(type(msg))}!`, {
+      invalidMessage: msg,
+    });
+
+    return type(msg) === String ? msg : tryInspect(msg, opts);
+  }
+};
 /**
  * Most loggers take a message with `log()`, encode it and write it to some
  * external resource.

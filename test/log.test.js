@@ -87,17 +87,44 @@ it('tryInspect', async () => {
 });
 
 it('serializeMessage', () => {
-  const ck = (ref, ...msg) => assert.strictEqual(serializeMessage(msg), ref);
+  const ck = (ref, msg) => assert.strictEqual(serializeMessage(msg), ref);
   ck('');
-  ck('42', 42);
-  ck('Hello 42 World', 'Hello ', 42, ' World');
-  ck('{ foo: 42 }', { foo: 42 });
-  ck('{ foo: [ 1, 2, 3, 4 ] }', { foo: [1, 2, 3, 4] });
+  ck('', []);
+  ck('42', [42]);
+  ck('Hello 42 World', ['Hello ', 42, ' World']);
+  ck('{ foo: 42 }', [{ foo: 42 }]);
+  ck('{ foo: [ 1, 2, 3, 4 ] }', [{ foo: [1, 2, 3, 4] }]);
 
   class Foo {}
   const f = new Foo();
   f.bar = 42;
-  ck('{ foo: Foo { bar: 42 } }', { foo: f });
+  ck('{ foo: Foo { bar: 42 } }', [{ foo: f }]);
+
+  // Deals with invalid messages
+  assertLogs(() => {
+    ck('true', true);
+    ck('null', null);
+    ck('hello', 'hello');
+    ck('{ bar: 42 }', { bar: 42 });
+  }, [
+    {
+      invalidMessage: true,
+      level: 'warn',
+      message: 'serializeMessage takes an array or undefined as message. Not Boolean!',
+    }, {
+      invalidMessage: null,
+      level: 'warn',
+      message: 'serializeMessage takes an array or undefined as message. Not null!',
+    }, {
+      invalidMessage: 'hello',
+      level: 'warn',
+      message: 'serializeMessage takes an array or undefined as message. Not String!',
+    }, {
+      invalidMessage: { bar: 42 },
+      level: 'warn',
+      message: 'serializeMessage takes an array or undefined as message. Not Object!',
+    },
+  ]);
 });
 
 it('messageFormatSimple', () => {
