@@ -25,6 +25,12 @@ describe('serialize-json', () => {
     }
   }
 
+  class CustomFallbackClass {
+    constructor() {
+      assign(this, { foo: 42, bar: dict({ bar: 23 }) });
+    }
+  }
+
   class CustomException extends Error {}
 
   const flatInp = {
