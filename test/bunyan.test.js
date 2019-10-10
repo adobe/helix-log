@@ -19,6 +19,7 @@ const bunyan = require('bunyan');
 const { size, type, iter } = require('ferrum');
 const {
   BunyanStreamInterface, messageFormatJson, MemLogger,
+  eraseBunyanDefaultFields, messageFormatSimple,
 } = require('../src/index');
 const { ckEq } = require('./util');
 
@@ -97,4 +98,26 @@ describe('BunyanStreamInterface', () => {
       },
     ]);
   });
+});
+
+it('eraseBunyanDefaultFields', () => {
+  const hlx = new MemLogger({ formatter: messageFormatSimple });
+  const iface = new BunyanStreamInterface({
+    logger: hlx,
+    filter: eraseBunyanDefaultFields,
+  });
+  const bun = bunyan.createLogger({
+    name: 'helixTestLogger',
+    streams: [{ type: 'raw', stream: iface }],
+  });
+
+  bun.info('Hello World');
+  bun.warn({ lang: 'fr' }, 'au revoir');
+
+  // This checks that bunyan fields are removed, even ones added
+  // in the future (since we actually use bunyan to generate the fields)
+  ckEq(hlx.buf, [
+    '[INFO] Hello World',
+    "[WARN] au revoir { lang: 'fr' }",
+  ]);
 });
