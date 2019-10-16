@@ -1,3 +1,59 @@
+# [3.0.0](https://github.com/adobe/helix-log/compare/v2.2.2...v3.0.0) (2019-10-16)
+
+
+### Features
+
+* Fields oriented logging ([e9c8ff3](https://github.com/adobe/helix-log/commit/e9c8ff3)), closes [#21](https://github.com/adobe/helix-log/issues/21)
+* Gracefully handle incorrect message field ([299378d](https://github.com/adobe/helix-log/commit/299378d))
+* Hide API keys ([67e3761](https://github.com/adobe/helix-log/commit/67e3761)), closes [#44](https://github.com/adobe/helix-log/issues/44)
+* jsonifyForLog now supports arbitrary types ([f0a5f86](https://github.com/adobe/helix-log/commit/f0a5f86)), closes [#45](https://github.com/adobe/helix-log/issues/45)
+* Provide a filter for getting rid of bunyan fields ([b43ad44](https://github.com/adobe/helix-log/commit/b43ad44))
+
+
+### BREAKING CHANGES
+
+* This constitutes a major refactor
+which touches many pieces of code.
+
+The most prominent feature of this is that the message format changed,
+we switch from the old array format to an object that contains some
+standard fields and arbitrary other fields. This new message format
+is extensively documented.
+
+A makeLogMessage function is provided to facilitate the creation of
+log messages.
+
+Since the log message format is now suitable for manipulation by external
+code, the MemLogger no longer performs formatting by default (it saves
+messages as-is).
+
+The timestamp and log level are now fields. We got rid of the additional
+options passed to the `log()` method.
+
+The other big feature of this is that we formalize the concept of `Interfaces`.
+Extensive documentation is provided for Interfaces, Loggers and Formatters.
+
+The concept of a formatter was additionally documented as well.
+
+The SimpleInterface is provided as the default interface. Global functions for
+using the simple interface with rootLogger are retained.
+
+This simple interface no longer performs fuzzy matching on potential json-serializable
+objects, instead users must now explicitly specify they wish to set custom fields.
+
+In order to make working with messages easier, all Interfaces & Loggers now
+feature (1) a filter function parameter which can be used to arbitrarily drop
+or transform messages passing through the logger (2) a level parameter which
+can be used to filter log messages based on level.
+As a side effect of this implicit error handling was moved into a single function
+and improved.
+
+The default parameters for level & filter are now 'silly' & identity (the no-op
+values); the users must explicitly choose to drop any log levels.
+
+In order to facilitate the implementation of Interfaces and Loggers, base classes
+are provided for each.
+
 ## [2.2.2](https://github.com/adobe/helix-log/compare/v2.2.1...v2.2.2) (2019-09-28)
 
 
