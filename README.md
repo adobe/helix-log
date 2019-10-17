@@ -45,18 +45,32 @@ error('You can log exceptions like this', new Error('This is a problem'));
 ## Classes
 
 <dl>
-<dt><a href="#Bunyan2HelixLog">Bunyan2HelixLog</a></dt>
+<dt><a href="#BunyanStreamInterface">BunyanStreamInterface</a></dt>
 <dd><p>Bunyan stream that can be used to forward any bunyan messages
 to helix log.</p>
 </dd>
 <dt><a href="#CoralogixLogger">CoralogixLogger</a></dt>
 <dd><p>Sends log messages to the coralogix logging service.</p>
 </dd>
+<dt><a href="#LoggerBase">LoggerBase</a></dt>
+<dd><p>Can be used as a base class/helper for implementing loggers.</p>
+<p>This will first apply the filter, drop the message if the level is
+too low or if the filter returned undefined and will then call the
+subclass provided this._logImpl function for final processing.</p>
+<p>This also wraps the entire logging logic into a promise enabled/async
+error handler that will log any errors using the rootLogger.</p>
+</dd>
+<dt><a href="#FormattedLoggerBase">FormattedLoggerBase</a></dt>
+<dd><p>Can be used as a base class/helper for implementing loggers that
+require a formatter.</p>
+<p>Will do the same processing as <code>LoggerBase</code> and in addition call
+the formatter before invoking _logImpl.</p>
+</dd>
 <dt><a href="#ConsoleLogger">ConsoleLogger</a></dt>
-<dd><p>Logger that is especially designed to be used in node.js.</p>
-<p>Print&#39;s to stderr; Marks errors, warns &amp; debug messages
-with a colored <code>[ERROR]</code>/... prefix. Uses <code>inspect</code> to display
-all non-strings.</p>
+<dd><p>Logger that is especially designed to be used in node.js
+Print&#39;s to stderr; Marks errors, warns &amp; debug messages
+with a colored <code>[ERROR]</code>/... prefix.</p>
+<p>Formatter MUST produce strings. Default formatter is messageFormatConsole.</p>
 </dd>
 <dt><a href="#MultiLogger">MultiLogger</a></dt>
 <dd><p>Simple logger that forwards all messages to the underlying loggers.</p>
@@ -72,13 +86,39 @@ logging.
 For normal files this is not a problem as linux will never block when writing
 to files, for sockets, pipes and ttys this might block the process for a considerable
 time.</p>
+<p>Formatter MUST produce strings. Default formatter is messageFormatTechnical.</p>
 </dd>
 <dt><a href="#MemLogger">MemLogger</a></dt>
 <dd><p>Logs messages to an in-memory buffer.</p>
+<p>Formatter can be anything; default just logs the messages as-is.</p>
+</dd>
+<dt><a href="#InterfaceBase">InterfaceBase</a></dt>
+<dd><p>Can be used as a base class/helper for implementing logging interfaces.</p>
+<p>This will make sure that all the required fields are set to their
+default value, apply the filter, drop the message if the level is
+too low or if the filter returned undefined and will then forward
+the message to the logger configured.</p>
+<p>This also wraps the entire logging logic into a promise enabled/async
+error handler that will log any errors using the rootLogger.</p>
+</dd>
+<dt><a href="#SimpleInterface">SimpleInterface</a></dt>
+<dd><p>The fields interface provides the ability to conveniently
+specify both a message and custom fields to the underlying logger.</p>
 </dd>
 <dt><a href="#LogdnaLogger">LogdnaLogger</a></dt>
 <dd><p>Sends log messages to the logdna logging service.</p>
 <p>Log messages are sent immediately.</p>
+</dd>
+<dt><a href="#Secret">Secret</a></dt>
+<dd><p>Special wrapper that should be used to protect secret values.</p>
+<p>Effectively this tries to hide the actual payload so that the
+secret has to be explicitly extracted before using it.</p>
+<pre><code>const mySecret = new Secret(42); // Create a secret
+mySecret.value; // =&gt; 42; extract the value
+mySecret.value = 64; // assign a new value</code></pre><p>The secret can only be accessed through the .secret property
+in order to make sure that the access is not accidental;
+the secret property cannot be iterated over and the secret will
+not be leaked when converted to json or when printed.</p>
 </dd>
 </dl>
 
@@ -87,14 +127,9 @@ time.</p>
 <dl>
 <dt><a href="#rootLogger">rootLogger</a></dt>
 <dd><p>The logger all other loggers attach to.</p>
-<p>Must always contain a logger named &#39;default&#39;; it is very much reccomended
+<p>Must always contain a logger named &#39;default&#39;; it is very much recommended
 that the default logger always be a console logger; this can serve as a good
 fallback in case other loggers fail.</p>
-<pre><code class="language-js">// Change the default logger
-rootLogger.loggers.set(&#39;default&#39;, new ConsoleLogger({level: &#39;debug&#39;}));</code></pre>
-<p>You should not log to the root logger directly; instead use one of the
-wrapper functions <code>log, fatal, err, warn, info, verbose, debug</code>; they
-perform some additional</p>
 </dd>
 <dt><a href="#JsonifyForLog">JsonifyForLog</a></dt>
 <dd><p>Trait used to serialize json objects to json. See jsonifyForLog.</p>
@@ -104,9 +139,23 @@ perform some additional</p>
 ## Functions
 
 <dl>
+<dt><a href="#eraseBunyanDefaultFields">eraseBunyanDefaultFields(fields)</a> ⇒ <code>Object</code></dt>
+<dd><p>Remove the default fields emitted by buyan.</p>
+<p>These fields are added by bunyan by default but are often not of
+much interest (like name, bunyanLevel, or <code>v</code>) or can be easily added
+again later for data based loggers where this information might be
+valuable (e.g. hostname, pid).</p>
+<p>Use like this:</p>
+</dd>
 <dt><a href="#numericLogLevel">numericLogLevel(name)</a> ⇒ <code>number</code></dt>
 <dd><p>This can be used to convert a string log level into it&#39;s
 numeric equivalent. More pressing log levels have lower numbers.</p>
+</dd>
+<dt><a href="#makeLogMessage">makeLogMessage([fields])</a> ⇒ <code><a href="#Message">Message</a></code></dt>
+<dd><p>Supplies default values for all the required fields in log messages.</p>
+<p>You may pass this a message that is just a string (as opposed to the
+usually required array of message components). The message will then automatically
+be wrapped in an array.</p>
 </dd>
 <dt><a href="#tryInspect">tryInspect(what, opts)</a></dt>
 <dd><p>Wrapper around inspect that is extremely robust against errors
@@ -117,124 +166,68 @@ and custom inspect functions.</p>
 inspect is returned and the error is logged using <code>err()</code>.</p>
 </dd>
 <dt><a href="#serializeMessage">serializeMessage(msg, opts)</a> ⇒ <code>string</code></dt>
-<dd><p>This is a useful helper function that turns a message containing
-arbitrary objects (like you would hand to console.log) into a string.</p>
-<p>Leaves strings as is; uses <code>require(&#39;util&#39;).inspect(...)</code> on all other
-types and joins the parameters using space:</p>
-<p>Loggers writing to raw streams or to strings usually use this, however
-not all loggers require this; e.g. in a browser environment
-console.warn/log/error should be used as these enable the use of the
-visual object inspectors, at least in chrome and firefox.</p>
+<dd><p>Turns the message field into a string.</p>
 </dd>
-<dt><a href="#messageFormatSimple">messageFormatSimple(msg, opts)</a> : <code><a href="#MessageFormatter">MessageFormatter</a></code></dt>
+<dt><a href="#messageFormatSimple">messageFormatSimple(fields)</a> ⇒ <code><a href="#MessageFormatter">MessageFormatter</a></code> | <code>string</code></dt>
 <dd><p>Simple message format: Serializes the message and prefixes it with
 the log level.</p>
 <p>This is used by the MemLogger by default for instance, because it is relatively
 easy to test with and contains no extra info.</p>
 </dd>
-<dt><a href="#messageFormatTechnical">messageFormatTechnical(msg, opts)</a> : <code><a href="#MessageFormatter">MessageFormatter</a></code></dt>
+<dt><a href="#messageFormatTechnical">messageFormatTechnical(fields)</a> ⇒ <code><a href="#MessageFormatter">MessageFormatter</a></code> | <code>string</code></dt>
 <dd><p>Message format that includes extra information; prefixes each messagej</p>
 <p>This is used by FileLogger by default for instance because if you
 work with many log files you need that sort of info.</p>
 </dd>
-<dt><a href="#messageFormatConsole">messageFormatConsole(msg, opts)</a> : <code><a href="#MessageFormatter">MessageFormatter</a></code></dt>
+<dt><a href="#messageFormatConsole">messageFormatConsole(fields)</a> ⇒ <code><a href="#MessageFormatter">MessageFormatter</a></code> | <code>string</code></dt>
 <dd><p>Message format with coloring/formatting escape codes</p>
 <p>Designed for use in terminals.</p>
 </dd>
-<dt><a href="#messageFormatJson">messageFormatJson(msg, opts)</a> : <code><a href="#MessageFormatter">MessageFormatter</a></code></dt>
-<dd><p>Message format that produces json.</p>
-<p>Designed for structured logging; e.g. Loggly.</p>
-<p>This produces an object that can be converted to JSON. It does not
-produce a string, but you can easily write an adapter like so:</p>
-<pre><code>const messageFormatJsonString = (...args) =&gt;
-   JSON.stringify(messageFormatJson(...args));</code></pre><p>You can also wrap this to provide extra default fields:</p>
-<pre><code>const messageFormatMyJson = (...args) =&gt; {
-   pid: process.pid,
-   ...JSON.stringify(messageFormatJson(...args)),
-}</code></pre><p>If the last element in the message can be converted to json-like using
-jsonifyForLog, then all the resulting fields will be included in the json-like
-object generated.</p>
-<p>The field <code>message</code> is reserved. The fields <code>level</code> and <code>timestamp</code> are filled with
-default values.</p>
-<p>If the last object is an exception, it will be sent as { exception: $exception };
-this serves to facilitate searching for exceptions explicitly.</p>
+<dt><a href="#messageFormatJson">messageFormatJson(fields)</a> ⇒ <code><a href="#MessageFormatter">MessageFormatter</a></code> | <code>Object</code></dt>
+<dd><p>Use jsonifyForLog to turn the fields into something that
+can be converted to json.</p>
 </dd>
-<dt><a href="#logWithOpts">logWithOpts(msg, opts)</a></dt>
-<dd><p>Lot to the root logger; this is a wrapper around <code>rootLogger.log</code>
-that handles exceptions thrown by rootLogger.log.</p>
+<dt><a href="#messageFormatJsonString">messageFormatJsonString(fields)</a> ⇒ <code><a href="#MessageFormatter">MessageFormatter</a></code> | <code>Object</code></dt>
+<dd><p>Message format that produces &amp; serialize json.</p>
+<p>Really just an alias for <code>JSON.stringify(messageFormatJson(fields))</code>.</p>
+</dd>
+<dt><a href="#__handleLoggingExceptions">__handleLoggingExceptions(fields, logger, code)</a> ⇒ <code><a href="#Message">Message</a></code></dt>
+<dd><p>Helper to wrap any block of code and handle it&#39;s async &amp; sync exceptions.</p>
+<p>This will catch any exceptions/promise rejections and log them using the rootLogger.</p>
 </dd>
 <dt><a href="#fatal">fatal(...msg)</a></dt>
-<dd><p>Uses the currently installed logger to print a fatal error-message</p>
+<dd><p>Log just a message to the rootLogger using the SimpleInterface.</p>
+<p>Alias for <code>new SimpleInterface().log(...msg)</code>.</p>
+<p>This is not a drop in replacement for console.log, since this
+does not support string interpolation using <code>%O/%f/...</code>, but should
+cover most use cases.</p>
 </dd>
-<dt><a href="#error">error(...msg)</a></dt>
-<dd><p>Uses the currently installed logger to print an error-message</p>
-</dd>
-<dt><a href="#warn">warn(...msg)</a></dt>
-<dd><p>Uses the currently installed logger to print a warn message</p>
-</dd>
-<dt><a href="#log">log(...msg)</a></dt>
-<dd><p>Uses the currently installed logger to print an informational message</p>
-</dd>
-<dt><a href="#verbose">verbose(...msg)</a></dt>
-<dd><p>Uses the currently installed logger to print a verbose message</p>
-</dd>
-<dt><a href="#debug">debug(...msg)</a></dt>
-<dd><p>Uses the currently installed logger to print a message intended for debugging</p>
-</dd>
-<dt><a href="#trace">trace(...msg)</a></dt>
-<dd><p>Uses the currently installed logger to print a trace level message</p>
-</dd>
-<dt><a href="#silly">silly(...msg)</a></dt>
-<dd><p>Uses the currently installed logger to print a silly level message</p>
+<dt><a href="#messageFormatJsonStatic">messageFormatJsonStatic(fields)</a> ⇒ <code>Object</code></dt>
+<dd><p>Message format used for comparing logs in tests.</p>
+<p>Pretty much just messageFormatJson, but removes the time stamp
+because that is hard to compare since it is different each time...</p>
+<p>If other highly variable fields are added in the future (e.g. id = uuidgen())
+these shall be removed too.</p>
 </dd>
 <dt><a href="#recordLogs">recordLogs(opts, fn)</a> ⇒ <code>string</code></dt>
 <dd><p>Record the log files with debug granularity while the given function is running.</p>
 <p>While the logger is recording, all other loggers are disabled.
 If this is not your desired behaviour, you can use the MemLogger
 manually.</p>
-<pre><code>const { assertEquals } = require(&#39;ferrum&#39;);
-const { recordLogs, info, err } = require(&#39;@adobe/helix-shared&#39;).log;
-
-const logs = recordLogs(() =&gt; {
-  info(&#39;Hello World\n&#39;);
-  err(&#39;Nooo&#39;)
-});
-assertEquals(logs, &#39;Hello World\n[ERROR] Nooo&#39;);</code></pre></dd>
+</dd>
 <dt><a href="#assertLogs">assertLogs(opts, fn, logs)</a></dt>
 <dd><p>Assert that a piece of code produces a specific set of log messages.</p>
-<pre><code>const { assertLogs, info, err } = require(&#39;@adobe/helix-shared&#39;).log;
-
-assertLogs(() =&gt; {
-  info(&#39;Hello World\n&#39;);
-  err(&#39;Nooo&#39;)
-}, multiline(`
-  Hello World
-  [ERROR] Nooo
-`));</code></pre></dd>
+</dd>
 <dt><a href="#recordAsyncLogs">recordAsyncLogs(opts, fn)</a> ⇒ <code>string</code></dt>
 <dd><p>Async variant of recordLogs.</p>
-<p>Note that using this is a bit dangerous;</p>
-<pre><code>const { assertEquals } = require(&#39;ferrum&#39;);
-const { recordAsyncLogs, info, err } = require(&#39;@adobe/helix-shared&#39;).log;
-
-const logs = await recordLogs(async () =&gt; {
-  info(&#39;Hello World\n&#39;);
-  await sleep(500);
-  err(&#39;Nooo&#39;)
-});
-assertEquals(logs, &#39;Hello World\n[ERROR] Nooo&#39;);</code></pre></dd>
+<p>Note that using this is a bit dangerous as other async procedures
+may also emit log messages while this procedure is running</p>
+</dd>
 <dt><a href="#assertAsyncLogs">assertAsyncLogs(opts, fn, logs)</a></dt>
 <dd><p>Async variant of assertLogs</p>
-<pre><code>const { assertAsyncLogs, info, err } = require(&#39;@adobe/helix-shared&#39;).log;
-
-await assertAsyncLogs(() =&gt; {
-  info(&#39;Hello World\n&#39;);
-  await sleep(500);
-  err(&#39;Nooo&#39;)
-}, multiline(`
-  Hello World
-  [ERROR] Nooo
-`));</code></pre></dd>
+<p>Note that using this is a bit dangerous as other async procedures
+may also emit logs while this async procedure is running.</p>
+</dd>
 <dt><a href="#jsonifyForLog">jsonifyForLog(what)</a> ⇒ <code>*</code></dt>
 <dd><p>jsonify the given data using the JsonifyForLog trait.</p>
 <p>Takes any javascript object and produces an object tree
@@ -251,31 +244,176 @@ this may loose information in cases where that makes sense.</p>
 ## Typedefs
 
 <dl>
-<dt><a href="#MessageFormatter">MessageFormatter</a> : <code>function</code></dt>
-<dd></dd>
+<dt><a href="#MessageFormatter">MessageFormatter</a> ⇒ <code>*</code></dt>
+<dd><p>Most loggers take a message with <code>log()</code>, encode it and write it to some
+external resource.</p>
+<p>E.g. most Loggers (like ConsoleLogger, FileLogger, ...) write to a text
+oriented resource, so the message needs to be converted to text. This is
+what the formatter is for.</p>
+<p>Not all Loggers require text; some are field oriented (working with json
+compatible data), others like the MemLogger can handle arbitrary javascript
+objects, but still provide an optional formatter (in this case defaulted to
+the identity function – doing nothing) in case the user explicitly wishes
+to perform formatting.</p>
+</dd>
 </dl>
 
 ## Interfaces
 
 <dl>
+<dt><a href="#Message">Message</a></dt>
+<dd><p>Internally helix log passe these messages around.</p>
+<p>Messages are just plain objects with some conventions
+regarding their fields:</p>
+</dd>
 <dt><a href="#Logger">Logger</a></dt>
-<dd><p>Uses a fairly simple interface to avoid complexity for use cases in
-which is not required. Can be used to dispatch logging to more
-elaborate libraries. E.g. a logger using winston could be constructed like this:</p>
+<dd><p>Loggers are used to write log message.</p>
+<p>These receive a message via their log() method and forward
+the message to some external resource or other loggers in
+the case of MultiLogger.</p>
+<p>Loggers MUST provide a <code>log(message)</code> method accepting log messages.</p>
+<p>Loggers SHOULD provide a constructor that can accept options as
+the last argument <code>new MyLogger(..args, { ...options })</code>;</p>
+<p>Loggers MAY support any arguments or options in addition to the ones
+described here.</p>
+<p>Loggers SHOULD NOT throw exceptions; instead they should log an error.</p>
+<p>Loggers MUST use the optional fields &amp; named options described in this
+interface either as specified here, or not at all.</p>
+<p>Loggers SHOULD provide a named constructor option &#39;level&#39; and associated field
+that can be used to limit logging to messages to those with a sufficiently
+high log level.</p>
+<p>Loggers SHOULD provide a named constructor option &#39;filter&#39; and associated field
+that can be used to transform messages arbitrarily. This option should default to
+the <code>identity()</code> function from ferrum. If the filter returns <code>undefined</code>
+the message MUST be discarded.</p>
+<p>If loggers send messages to some external resource not supporting the Message
+format, they SHOULD also provide an option &#39;formatter&#39; and associated field
+that is used to produce the external format. This formatter SHOULD be set
+to a sane default.</p>
+<p>Helix-log provides some built-in formatters e.g. for plain text, json and
+for consoles supporting ANSI escape sequences.</p>
+</dd>
+<dt><a href="#LoggingInterface">LoggingInterface</a></dt>
+<dd><p>Helix-Log LoggingInterfaces take messages as defined by some external interface,
+convert them to the internal Message format and forward them to a logger.</p>
+<p>Some use cases include:</p>
+<ul>
+<li>Providing a Console.log/warn/error compatible interface</li>
+<li>Providing winston or bunyan compatible logging API</li>
+<li>Providing a backend for forwarding bunyan or winston logs to helix log</li>
+<li>Receiving log messages over HTTP</li>
+<li>SimpleInterface and SimpleInterface are used to provide the
+<code>info(&quot;My&quot;, &quot;Message&quot;)</code> and <code>info.fields(&quot;My&quot;, &quot;Message&quot;, { cutsom: &quot;fields&quot; })</code>
+interfaces.</li>
+</ul>
+<p>LoggingInterfaces SHOULD provide a constructor that can accept options as
+the last argument <code>new MyInterface(..args, { ...options })</code>;</p>
+<p>LoggingInterfaces MAY support any arguments or options in addition to the ones
+described here.a</p>
+<p>LoggingInterfaces MUST use the optional fields &amp; named options described in this
+LoggingInterface either as specified here, or not at all.</p>
+<p>LoggingInterfaces SHOULD NOT throw exceptions; instead they should log errors using
+the global logger.</p>
+<p>LoggingInterfaces SHOULD provide a named constructor option/field &#39;logger&#39; that indicates
+which destination logs are sent to. This option SHOULD default to the rootLogger.</p>
+<p>LoggingInterfaces SHOULD provide a named constructor option &#39;level&#39; and associated field
+that can be used to limit logging to messages to those with a sufficiently
+high log level.</p>
+<p>LoggingInterfaces SHOULD provide a named constructor option &#39;filter&#39; and associated field
+that can be used to transform messages arbitrarily. This option should default to
+the <code>identity()</code> function from ferrum. If the filter returns <code>undefined</code>
+the message MUST be discarded.</p>
 </dd>
 </dl>
 
+<a name="Message"></a>
+
+## Message
+Internally helix log passe these messages around.
+
+Messages are just plain objects with some conventions
+regarding their fields:
+
+**Kind**: global interface  
+**Example**  
+```
+const myMessage = {
+  // REQUIRED
+
+  level: 'info',
+  timestamp: new Date(),
+
+  // OPTIONAL
+
+  // This is what constitutes the actual log message an array
+  // of any js objects which are usually later converted to text
+  // using `tryInspect()`; we defer this text conversion step so
+  // formatters can do more fancy operations (like colorizing certain
+  // types; or we could)
+  message: ['Print ', 42, ' deep thoughts!']
+  exception: {
+
+    // REQUIRED
+    $type: 'MyCustomException',
+    name; 'MyCustomException',
+    message: 'Some custom exception ocurred',
+    stack: '...',
+
+    // OPTIONAL
+    code: 42,
+    causedBy: <nested exception>
+
+    // EXCEPTION MAY CONTAIN ARBITRARY OTHER FIELDS
+    ...fields,
+  }
+
+  // MESSAGE MAY CONTAIN ARBITRARY OTHER FIELDS
+  ...fields,
+}
+```
 <a name="Logger"></a>
 
 ## Logger
-Uses a fairly simple interface to avoid complexity for use cases in
-which is not required. Can be used to dispatch logging to more
-elaborate libraries. E.g. a logger using winston could be constructed like this:
+Loggers are used to write log message.
+
+These receive a message via their log() method and forward
+the message to some external resource or other loggers in
+the case of MultiLogger.
+
+Loggers MUST provide a `log(message)` method accepting log messages.
+
+Loggers SHOULD provide a constructor that can accept options as
+the last argument `new MyLogger(..args, { ...options })`;
+
+Loggers MAY support any arguments or options in addition to the ones
+described here.
+
+Loggers SHOULD NOT throw exceptions; instead they should log an error.
+
+Loggers MUST use the optional fields & named options described in this
+interface either as specified here, or not at all.
+
+Loggers SHOULD provide a named constructor option 'level' and associated field
+that can be used to limit logging to messages to those with a sufficiently
+high log level.
+
+Loggers SHOULD provide a named constructor option 'filter' and associated field
+that can be used to transform messages arbitrarily. This option should default to
+the `identity()` function from ferrum. If the filter returns `undefined`
+the message MUST be discarded.
+
+If loggers send messages to some external resource not supporting the Message
+format, they SHOULD also provide an option 'formatter' and associated field
+that is used to produce the external format. This formatter SHOULD be set
+to a sane default.
+
+Helix-log provides some built-in formatters e.g. for plain text, json and
+for consoles supporting ANSI escape sequences.
 
 **Kind**: global interface  
 <a name="Logger+log"></a>
 
-### logger.log(msg, opts)
+### logger.log(fields)
 Actually print a log message
 
 Implementations of this MUST NOT throw exceptions. Instead implementors
@@ -288,59 +426,59 @@ still catch any errors and handle them appropriately.
 
 **Kind**: instance method of [<code>Logger</code>](#Logger)  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| msg | <code>Array</code> | The message; list of arguments as you would pass it to console.log |
-| opts | <code>Object</code> | – Configuration object; contains only one key at   the moment: `level` - The log level which can be one of `error, warn,   info, verbose` and `debug`. |
+| Param | Type |
+| --- | --- |
+| fields | [<code>Message</code>](#Message) | 
 
-<a name="Bunyan2HelixLog"></a>
+<a name="LoggingInterface"></a>
 
-## Bunyan2HelixLog
+## LoggingInterface
+Helix-Log LoggingInterfaces take messages as defined by some external interface,
+convert them to the internal Message format and forward them to a logger.
+
+Some use cases include:
+
+- Providing a Console.log/warn/error compatible interface
+- Providing winston or bunyan compatible logging API
+- Providing a backend for forwarding bunyan or winston logs to helix log
+- Receiving log messages over HTTP
+- SimpleInterface and SimpleInterface are used to provide the
+  `info("My", "Message")` and `info.fields("My", "Message", { cutsom: "fields" })`
+  interfaces.
+
+LoggingInterfaces SHOULD provide a constructor that can accept options as
+the last argument `new MyInterface(..args, { ...options })`;
+
+LoggingInterfaces MAY support any arguments or options in addition to the ones
+described here.a
+
+LoggingInterfaces MUST use the optional fields & named options described in this
+LoggingInterface either as specified here, or not at all.
+
+LoggingInterfaces SHOULD NOT throw exceptions; instead they should log errors using
+the global logger.
+
+LoggingInterfaces SHOULD provide a named constructor option/field 'logger' that indicates
+which destination logs are sent to. This option SHOULD default to the rootLogger.
+
+LoggingInterfaces SHOULD provide a named constructor option 'level' and associated field
+that can be used to limit logging to messages to those with a sufficiently
+high log level.
+
+LoggingInterfaces SHOULD provide a named constructor option 'filter' and associated field
+that can be used to transform messages arbitrarily. This option should default to
+the `identity()` function from ferrum. If the filter returns `undefined`
+the message MUST be discarded.
+
+**Kind**: global interface  
+<a name="BunyanStreamInterface"></a>
+
+## BunyanStreamInterface
 Bunyan stream that can be used to forward any bunyan messages
 to helix log.
 
 **Kind**: global class  
-<a name="new_Bunyan2HelixLog_new"></a>
-
-### new Bunyan2HelixLog(logger)
-
-| Param | Type | Description |
-| --- | --- | --- |
-| logger | [<code>Logger</code>](#Logger) | – The helix-log logger to…well…log to.   If this is not given, the `rootLogger` will be used instead. |
-
-**Example**  
-```
-const bunyan = require('bunyan');
-const { Bunyan2HelixLog } = require('helix-log');
-
-const logger = bunyan.createLogger({name: 'helixLogger'});
-logger.addStream(Bunyan2HelixLog.createStream());
-```
-
-or
-
-```
-const logger = bunyan.createLogger({
-   name: 'helixLogger',
-   streams: [
-     Bunyan2HelixLog.createStream()
-   ],
-});
-```
-
-which is really shorthand for:
-
-```
-const logger = bunyan.createLogger({
-   name: 'helixLogger',
-   streams: [
-     {
-       type: 'raw',
-       stream: new Bunyan2HelixLog(rootLogger),
-     };
-   ],
-});
-```
+**Implements**: [<code>LoggingInterface</code>](#LoggingInterface)  
 <a name="CoralogixLogger"></a>
 
 ## CoralogixLogger
@@ -350,55 +488,27 @@ Sends log messages to the coralogix logging service.
 **Implements**: [<code>Logger</code>](#Logger)  
 
 * [CoralogixLogger](#CoralogixLogger)
-    * [new CoralogixLogger(apikey, app, subsystem, opts)](#new_CoralogixLogger_new)
-    * [.level](#CoralogixLogger+level) : <code>string</code>
-    * [.formatter](#CoralogixLogger+formatter) : [<code>MessageFormatter</code>](#MessageFormatter)
-    * [.fmtOpts](#CoralogixLogger+fmtOpts) : <code>object</code>
-    * [.apikey](#CoralogixLogger+apikey) : <code>string</code>
+    * [new CoralogixLogger(apikey, app, subsystem)](#new_CoralogixLogger_new)
+    * [.apikey](#CoralogixLogger+apikey) : [<code>Secret</code>](#Secret)
     * [.app](#CoralogixLogger+app) : <code>string</code>
     * [.subsystem](#CoralogixLogger+subsystem) : <code>string</code>
     * [.host](#CoralogixLogger+host) : <code>string</code>
-    * [.log(msg, opts)](#CoralogixLogger+log)
 
 <a name="new_CoralogixLogger_new"></a>
 
-### new CoralogixLogger(apikey, app, subsystem, opts)
+### new CoralogixLogger(apikey, app, subsystem)
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| apikey | <code>string</code> |  | – Your coralogix api key |
+| apikey | <code>string</code> \| [<code>Secret</code>](#Secret) |  | – Your coralogix api key |
 | app | <code>string</code> |  | – Name of the app under which the log messages should be categorized |
-| subsystem | <code>string</code> |  | – Name of the subsystem under which   the log messages should be categorized |
-| opts | <code>Object</code> |  | – Configuration object. Options are also forwarded to the formatter |
-| [opts.level] | <code>string</code> | <code>&quot;silly&quot;</code> | The minimum log level to sent to coralogix |
-| [opts.formatter] | [<code>MessageFormatter</code>](#MessageFormatter) | <code>messageFormatJson</code> | A formatter producing json |
-| [opts.host] | <code>string</code> | <code>&quot;&lt;system hostname&gt;&quot;</code> | The hostname under which to categorize the messages |
-| [opts.apiurl] | <code>string</code> | <code>&quot;https://api.coralogix.com/api/v1/&quot;</code> | where the coralogix api can be found |
+| subsystem | <code>string</code> |  | – Name of the subsystem under which |
+| [opts.host] | <code>string</code> | <code>&quot;os.hostname()&quot;</code> | The hostname under which to categorize the messages |
+| [opts.apiurl] | <code>string</code> | <code>&quot;&#x27;https://api.coralogix.com/api/v1/&#x27;&quot;</code> | where the coralogix api can be found; for testing; where the coralogix api can be found; for testing |
 
-<a name="CoralogixLogger+level"></a>
-
-### coralogixLogger.level : <code>string</code>
-The minimum log level for messages to be printed.
-Feel free to change to one of the available levels.
-
-**Kind**: instance property of [<code>CoralogixLogger</code>](#CoralogixLogger)  
-<a name="CoralogixLogger+formatter"></a>
-
-### coralogixLogger.formatter : [<code>MessageFormatter</code>](#MessageFormatter)
-Formatter used to format all the messages.
-Must yield an object suitable for passing to JSON.serialize
-
-**Kind**: instance property of [<code>CoralogixLogger</code>](#CoralogixLogger)  
-<a name="CoralogixLogger+fmtOpts"></a>
-
-### coralogixLogger.fmtOpts : <code>object</code>
-Options that will be passed to the formatter;
-Feel free to mutate or exchange.
-
-**Kind**: instance property of [<code>CoralogixLogger</code>](#CoralogixLogger)  
 <a name="CoralogixLogger+apikey"></a>
 
-### coralogixLogger.apikey : <code>string</code>
+### coralogixLogger.apikey : [<code>Secret</code>](#Secret)
 Name of the app under which the log messages should be categorized
 
 **Kind**: instance property of [<code>CoralogixLogger</code>](#CoralogixLogger)  
@@ -420,107 +530,127 @@ Name of the subsystem under which the log messages should be categorized
 The hostname under which to categorize the messages
 
 **Kind**: instance property of [<code>CoralogixLogger</code>](#CoralogixLogger)  
-<a name="CoralogixLogger+log"></a>
+<a name="LoggerBase"></a>
 
-### coralogixLogger.log(msg, opts)
-Actually print a log message
+## LoggerBase
+Can be used as a base class/helper for implementing loggers.
 
-Implementations of this MUST NOT throw exceptions. Instead implementors
-ARE ADVISED to attempt to log the error using err() while employing some
-means to avoid recursively triggering the error. Loggers SHOULD fall back
-to logging with console.error.
+This will first apply the filter, drop the message if the level is
+too low or if the filter returned undefined and will then call the
+subclass provided this._logImpl function for final processing.
 
-Even though loggers MUST NOT throw exceptions; users of this method SHOULD
-still catch any errors and handle them appropriately.
+This also wraps the entire logging logic into a promise enabled/async
+error handler that will log any errors using the rootLogger.
 
-**Kind**: instance method of [<code>CoralogixLogger</code>](#CoralogixLogger)  
-**Implements**: [<code>log</code>](#Logger+log)  
+**Kind**: global class  
+
+* [LoggerBase](#LoggerBase)
+    * [new LoggerBase(opts)](#new_LoggerBase_new)
+    * [.level](#LoggerBase+level) : <code>string</code>
+    * [.filter](#LoggerBase+filter) : <code>function</code>
+
+<a name="new_LoggerBase_new"></a>
+
+### new LoggerBase(opts)
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| opts | <code>Object</code> |  | – Optional, named parameters |
+| [opts.level] | <code>string</code> | <code>&quot;&#x27;silly&#x27;&quot;</code> | The minimum log level to sent to loggly |
+| [opts.filter] | <code>function</code> | <code>identity</code> | Will be given every log message to perform   arbitrary transformations; must return either another valid message object or undefined   (in which case the message will be dropped). |
+
+**Example**  
+```
+class MyConsoleLogger extends LoggerBase {
+  _logImpl(fields) {
+    console.log(fields);
+  }
+}
+```
+<a name="LoggerBase+level"></a>
+
+### loggerBase.level : <code>string</code>
+The minimum log level for messages to be printed.
+Feel free to change to one of the available levels.
+
+**Kind**: instance property of [<code>LoggerBase</code>](#LoggerBase)  
+<a name="LoggerBase+filter"></a>
+
+### loggerBase.filter : <code>function</code>
+Used to optionally transform all messages.
+Takes a message and returns a transformed message
+or undefined (in which case the message will be dropped).
+
+**Kind**: instance property of [<code>LoggerBase</code>](#LoggerBase)  
+<a name="FormattedLoggerBase"></a>
+
+## FormattedLoggerBase
+Can be used as a base class/helper for implementing loggers that
+require a formatter.
+
+Will do the same processing as `LoggerBase` and in addition call
+the formatter before invoking _logImpl.
+
+**Kind**: global class  
+
+* [FormattedLoggerBase](#FormattedLoggerBase)
+    * [new FormattedLoggerBase()](#new_FormattedLoggerBase_new)
+    * [.formatter](#FormattedLoggerBase+formatter) : [<code>MessageFormatter</code>](#MessageFormatter)
+
+<a name="new_FormattedLoggerBase_new"></a>
+
+### new FormattedLoggerBase()
 
 | Param | Type | Description |
 | --- | --- | --- |
-| msg | <code>Array</code> | The message; list of arguments as you would pass it to console.log |
-| opts | <code>Object</code> | – Configuration object; contains only one key at   the moment: `level` - The log level which can be one of `error, warn,   info, verbose` and `debug`. |
+| [opts.formatter] | <code>function</code> | In addition to the filter, the formatter   will be used to convert the message into a format compatible with   the external resource. |
 
+**Example**  
+```
+class MyConsoleLogger extends FormattedLoggerBase {
+  _logImpl(payload, fields) {
+    console.log(`[${fields.level}]`, payload);
+  }
+}
+```
+<a name="FormattedLoggerBase+formatter"></a>
+
+### formattedLoggerBase.formatter : [<code>MessageFormatter</code>](#MessageFormatter)
+Formatter used to format all the messages.
+Must yield an object suitable for the external resource
+this logger writes to.
+
+**Kind**: instance property of [<code>FormattedLoggerBase</code>](#FormattedLoggerBase)  
 <a name="ConsoleLogger"></a>
 
 ## ConsoleLogger
-Logger that is especially designed to be used in node.js.
-
+Logger that is especially designed to be used in node.js
 Print's to stderr; Marks errors, warns & debug messages
-with a colored `[ERROR]`/... prefix. Uses `inspect` to display
-all non-strings.
+with a colored `[ERROR]`/... prefix.
+
+Formatter MUST produce strings. Default formatter is messageFormatConsole.
 
 **Kind**: global class  
 **Implements**: [<code>Logger</code>](#Logger)  
 
 * [ConsoleLogger](#ConsoleLogger)
-    * [new ConsoleLogger(opts)](#new_ConsoleLogger_new)
-    * [.level](#ConsoleLogger+level) : <code>string</code>
-    * [.formatter](#ConsoleLogger+formatter) : [<code>MessageFormatter</code>](#MessageFormatter)
-    * [.fmtOpts](#ConsoleLogger+fmtOpts) : <code>object</code>
+    * [new ConsoleLogger()](#new_ConsoleLogger_new)
     * [.stream](#ConsoleLogger+stream) : <code>Writable</code>
-    * [.log(msg, opts)](#ConsoleLogger+log)
 
 <a name="new_ConsoleLogger_new"></a>
 
-### new ConsoleLogger(opts)
+### new ConsoleLogger()
 
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| opts | <code>Object</code> |  | – Configuration object. All other options are forwarded to the formatter. |
-| [opts.level] | <code>string</code> | <code>&quot;info&quot;</code> | The minimum log level |
 | [opts.stream] | <code>Writable</code> | <code>console._stderr</code> | A writable stream to log to. |
-| [opts.formatter] | [<code>MessageFormatter</code>](#MessageFormatter) | <code>messageFormatConsole</code> | A formatter producing strings |
 
-<a name="ConsoleLogger+level"></a>
-
-### consoleLogger.level : <code>string</code>
-The minimum log level for messages to be printed.
-Feel free to change to one of the available levels.
-
-**Kind**: instance property of [<code>ConsoleLogger</code>](#ConsoleLogger)  
-<a name="ConsoleLogger+formatter"></a>
-
-### consoleLogger.formatter : [<code>MessageFormatter</code>](#MessageFormatter)
-Formatter used to format all the messages.
-Must yield an object suitable for passing to JSON.serialize
-Feel free to mutate or exchange.
-
-**Kind**: instance property of [<code>ConsoleLogger</code>](#ConsoleLogger)  
-<a name="ConsoleLogger+fmtOpts"></a>
-
-### consoleLogger.fmtOpts : <code>object</code>
-Options that will be passed to the formatter;
-Feel free to mutate or exchange.
-
-**Kind**: instance property of [<code>ConsoleLogger</code>](#ConsoleLogger)  
 <a name="ConsoleLogger+stream"></a>
 
 ### consoleLogger.stream : <code>Writable</code>
-Writable stream that is used to write the log messages to.
+Writable stream to write log messages to. Usually console._stderr.
 
 **Kind**: instance property of [<code>ConsoleLogger</code>](#ConsoleLogger)  
-<a name="ConsoleLogger+log"></a>
-
-### consoleLogger.log(msg, opts)
-Actually print a log message
-
-Implementations of this MUST NOT throw exceptions. Instead implementors
-ARE ADVISED to attempt to log the error using err() while employing some
-means to avoid recursively triggering the error. Loggers SHOULD fall back
-to logging with console.error.
-
-Even though loggers MUST NOT throw exceptions; users of this method SHOULD
-still catch any errors and handle them appropriately.
-
-**Kind**: instance method of [<code>ConsoleLogger</code>](#ConsoleLogger)  
-**Implements**: [<code>log</code>](#Logger+log)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| msg | <code>Array</code> | The message; list of arguments as you would pass it to console.log |
-| opts | <code>Object</code> | – Configuration object; contains only one key at   the moment: `level` - The log level which can be one of `error, warn,   info, verbose` and `debug`. |
-
 <a name="MultiLogger"></a>
 
 ## MultiLogger
@@ -532,39 +662,7 @@ order to add, remove or alter logger.
 
 **Kind**: global class  
 **Implements**: [<code>Logger</code>](#Logger)  
-
-* [MultiLogger](#MultiLogger)
-    * [.loggers](#MultiLogger+loggers) : [<code>Map.&lt;Logger&gt;</code>](#Logger)
-    * [.log(msg, opts)](#MultiLogger+log)
-
-<a name="MultiLogger+loggers"></a>
-
-### multiLogger.loggers : [<code>Map.&lt;Logger&gt;</code>](#Logger)
-The list of loggers this is forwarding to. Feel free to mutate
-or replace.
-
-**Kind**: instance property of [<code>MultiLogger</code>](#MultiLogger)  
-<a name="MultiLogger+log"></a>
-
-### multiLogger.log(msg, opts)
-Actually print a log message
-
-Implementations of this MUST NOT throw exceptions. Instead implementors
-ARE ADVISED to attempt to log the error using err() while employing some
-means to avoid recursively triggering the error. Loggers SHOULD fall back
-to logging with console.error.
-
-Even though loggers MUST NOT throw exceptions; users of this method SHOULD
-still catch any errors and handle them appropriately.
-
-**Kind**: instance method of [<code>MultiLogger</code>](#MultiLogger)  
-**Implements**: [<code>log</code>](#Logger+log)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| msg | <code>Array</code> | The message; list of arguments as you would pass it to console.log |
-| opts | <code>Object</code> | – Configuration object; contains only one key at   the moment: `level` - The log level which can be one of `error, warn,   info, verbose` and `debug`. |
-
+**Parameter**: <code>Sequence&lt;Loggers&gt;</code> loggers – The loggers to forward to.  
 <a name="FileLogger"></a>
 
 ## FileLogger
@@ -577,151 +675,144 @@ For normal files this is not a problem as linux will never block when writing
 to files, for sockets, pipes and ttys this might block the process for a considerable
 time.
 
+Formatter MUST produce strings. Default formatter is messageFormatTechnical.
+
 **Kind**: global class  
 **Implements**: [<code>Logger</code>](#Logger)  
 
 * [FileLogger](#FileLogger)
-    * [new FileLogger(name, opts)](#new_FileLogger_new)
-    * [.fd](#FileLogger+fd) : <code>number</code>
-    * [.level](#FileLogger+level) : <code>string</code>
-    * [.formatter](#FileLogger+formatter) : [<code>MessageFormatter</code>](#MessageFormatter)
-    * [.fmtOpts](#FileLogger+fmtOpts) : <code>object</code>
-    * [.log(msg, opts)](#FileLogger+log)
+    * [new FileLogger(name)](#new_FileLogger_new)
+    * [.fd](#FileLogger+fd) : <code>Integer</code>
 
 <a name="new_FileLogger_new"></a>
 
-### new FileLogger(name, opts)
-
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| name | <code>string</code> \| <code>number</code> |  | The path of the file to log to   OR the unix file descriptor to log to. |
-| opts | <code>Object</code> |  | – Configuration object. All other options are forwarded to the formatter. |
-| [opts.level] | <code>string</code> | <code>&quot;info&quot;</code> | The minimum log level |
-| [opts.formatter] | [<code>MessageFormatter</code>](#MessageFormatter) | <code>messageFormatTechnical</code> | A formatter producing strings |
-
-<a name="FileLogger+fd"></a>
-
-### fileLogger.fd : <code>number</code>
-The underlying operating system file descriptor.
-
-**Kind**: instance property of [<code>FileLogger</code>](#FileLogger)  
-<a name="FileLogger+level"></a>
-
-### fileLogger.level : <code>string</code>
-The minimum log level for messages to be printed.
-Feel free to change to one of the available levels.
-
-**Kind**: instance property of [<code>FileLogger</code>](#FileLogger)  
-<a name="FileLogger+formatter"></a>
-
-### fileLogger.formatter : [<code>MessageFormatter</code>](#MessageFormatter)
-Formatter used to format all the messages.
-Must yield an object suitable for passing to JSON.serialize
-Feel free to mutate or exchange.
-
-**Kind**: instance property of [<code>FileLogger</code>](#FileLogger)  
-<a name="FileLogger+fmtOpts"></a>
-
-### fileLogger.fmtOpts : <code>object</code>
-Options that will be passed to the formatter;
-Feel free to mutate or exchange.
-
-**Kind**: instance property of [<code>FileLogger</code>](#FileLogger)  
-<a name="FileLogger+log"></a>
-
-### fileLogger.log(msg, opts)
-Actually print a log message
-
-Implementations of this MUST NOT throw exceptions. Instead implementors
-ARE ADVISED to attempt to log the error using err() while employing some
-means to avoid recursively triggering the error. Loggers SHOULD fall back
-to logging with console.error.
-
-Even though loggers MUST NOT throw exceptions; users of this method SHOULD
-still catch any errors and handle them appropriately.
-
-**Kind**: instance method of [<code>FileLogger</code>](#FileLogger)  
-**Implements**: [<code>log</code>](#Logger+log)  
+### new FileLogger(name)
 
 | Param | Type | Description |
 | --- | --- | --- |
-| msg | <code>Array</code> | The message; list of arguments as you would pass it to console.log |
-| opts | <code>Object</code> | – Configuration object; contains only one key at   the moment: `level` - The log level which can be one of `error, warn,   info, verbose` and `debug`. |
+| name | <code>string</code> \| <code>Integer</code> | The path of the file to log to   OR the unix file descriptor to log to. |
 
+<a name="FileLogger+fd"></a>
+
+### fileLogger.fd : <code>Integer</code>
+The underlying operating system file descriptor.
+
+**Kind**: instance property of [<code>FileLogger</code>](#FileLogger)  
 <a name="MemLogger"></a>
 
 ## MemLogger
 Logs messages to an in-memory buffer.
 
+Formatter can be anything; default just logs the messages as-is.
+
 **Kind**: global class  
 **Implements**: [<code>Logger</code>](#Logger)  
-
-* [MemLogger](#MemLogger)
-    * [new MemLogger(opts)](#new_MemLogger_new)
-    * [.buf](#MemLogger+buf) : <code>Array</code>
-    * [.level](#MemLogger+level) : <code>string</code>
-    * [.formatter](#MemLogger+formatter) : [<code>MessageFormatter</code>](#MessageFormatter)
-    * [.fmtOpts](#MemLogger+fmtOpts) : <code>Object</code>
-    * [.log(msg, opts)](#MemLogger+log)
-
-<a name="new_MemLogger_new"></a>
-
-### new MemLogger(opts)
-
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| opts | <code>Object</code> |  | – Configuration object. All other options are forwarded to the formatter. |
-| [opts.level] | <code>string</code> | <code>&quot;info&quot;</code> | The minimum log level |
-| [opts.formatter] | [<code>MessageFormatter</code>](#MessageFormatter) | <code>messageFormatSimple</code> | A formatter any format. |
-
 <a name="MemLogger+buf"></a>
 
 ### memLogger.buf : <code>Array</code>
-The buffer that stores all separate, formatted log messages.
+An array that holds all the messages logged thus far.
+May be modified An array that holds all the messages logged thus far.
+May be modified.
 
 **Kind**: instance property of [<code>MemLogger</code>](#MemLogger)  
-<a name="MemLogger+level"></a>
+<a name="InterfaceBase"></a>
 
-### memLogger.level : <code>string</code>
-The minimum log level for messages to be printed.
-Feel free to change to one of the available levelsformatter
+## InterfaceBase
+Can be used as a base class/helper for implementing logging interfaces.
 
-**Kind**: instance property of [<code>MemLogger</code>](#MemLogger)  
-<a name="MemLogger+formatter"></a>
+This will make sure that all the required fields are set to their
+default value, apply the filter, drop the message if the level is
+too low or if the filter returned undefined and will then forward
+the message to the logger configured.
 
-### memLogger.formatter : [<code>MessageFormatter</code>](#MessageFormatter)
-Formatter used to format all the messages.
-Must yield an object suitable for passing to JSON.serialize
-Feel free to mutate or exchange.
+This also wraps the entire logging logic into a promise enabled/async
+error handler that will log any errors using the rootLogger.
 
-**Kind**: instance property of [<code>MemLogger</code>](#MemLogger)  
-<a name="MemLogger+fmtOpts"></a>
+**Kind**: global class  
+<a name="new_InterfaceBase_new"></a>
 
-### memLogger.fmtOpts : <code>Object</code>
-Options that will be passed to the formatter;
-Feel free to mutate or exchange.
+### new InterfaceBase(opts)
 
-**Kind**: instance property of [<code>MemLogger</code>](#MemLogger)  
-<a name="MemLogger+log"></a>
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| opts | <code>Object</code> |  | – Optional, named parameters |
+| [opts.level] | <code>string</code> | <code>&quot;&#x27;silly&#x27;&quot;</code> | The minimum log level to sent to loggly |
+| [opts.filter] | <code>function</code> | <code>identity</code> | Will be given every log message to perform   arbitrary transformations; must return either another valid message object or undefined   (in which case the message will be dropped). |
 
-### memLogger.log(msg, opts)
-Actually print a log message
+**Example**  
+```
+class MyTextInterface extends InterfaceBase {
+  logText(str) {
+    this._logImpl({ message: [str] });
+  }
+};
 
-Implementations of this MUST NOT throw exceptions. Instead implementors
-ARE ADVISED to attempt to log the error using err() while employing some
-means to avoid recursively triggering the error. Loggers SHOULD fall back
-to logging with console.error.
+const txt = new MyTextInterface({ logger: rootLogger });
+txt.logText("Hello World");
+```
+<a name="SimpleInterface"></a>
 
-Even though loggers MUST NOT throw exceptions; users of this method SHOULD
-still catch any errors and handle them appropriately.
+## SimpleInterface
+The fields interface provides the ability to conveniently
+specify both a message and custom fields to the underlying logger.
 
-**Kind**: instance method of [<code>MemLogger</code>](#MemLogger)  
-**Implements**: [<code>log</code>](#Logger+log)  
+**Kind**: global class  
+**Implements**: [<code>LoggingInterface</code>](#LoggingInterface)  
+
+* [SimpleInterface](#SimpleInterface)
+    * [.fatalFields(...msg)](#SimpleInterface+fatalFields)
+    * [.fatal(...msg)](#SimpleInterface+fatal)
+
+<a name="SimpleInterface+fatalFields"></a>
+
+### simpleInterface.fatalFields(...msg)
+The *Fields methods are used to log both a message
+custom fields to the underlying logger.
+
+The fields object must be present (and error will be thrown
+if the last element is not an object) and any fields specified
+take precedence over default values.
+
+**Kind**: instance method of [<code>SimpleInterface</code>](#SimpleInterface)  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| msg | <code>Array</code> | The message; list of arguments as you would pass it to console.log |
-| opts | <code>Object</code> | – Configuration object; contains only one key at   the moment: `level` - The log level which can be one of `error, warn,   info, verbose` and `debug`. |
+| ...msg | <code>\*</code> | The message to write |
+
+**Example**  
+```
+const { SimpleInterface } = require('helix-log');
+
+const logger = new SimpleInterface();
+
+// Will throw an error because the fields object is missing.
+logger.verboseFields("Hello");
+
+// Will log a message 'Fooled!' with level error and the time
+// stamp set to the y2k (although it would be more customary
+// use logFields to indicate that the log level will be set through
+// the fields).
+sillyFields("Hello World", {
+  level: 'error',
+  timestamp: new Date("2000-01-01"),
+  message: ["Fooled!"]
+});
+```
+<a name="SimpleInterface+fatal"></a>
+
+### simpleInterface.fatal(...msg)
+These methods are used to log just a message with no custom
+fields to the underlying logger; similar to console.log.
+
+This is not a drop in replacement for console.log, since this
+does not support string interpolation using `%O/%f/...`, but should
+cover most use cases.
+
+**Kind**: instance method of [<code>SimpleInterface</code>](#SimpleInterface)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ...msg | <code>\*</code> | The message to write |
 
 <a name="LogdnaLogger"></a>
 
@@ -735,105 +826,77 @@ Log messages are sent immediately.
 
 * [LogdnaLogger](#LogdnaLogger)
     * [new LogdnaLogger(apikey, app, file, opts)](#new_LogdnaLogger_new)
-    * [.level](#LogdnaLogger+level) : <code>string</code>
-    * [.formatter](#LogdnaLogger+formatter) : <code>function</code>
-    * [.fmtOpts](#LogdnaLogger+fmtOpts) : <code>object</code>
-    * [.apikey](#LogdnaLogger+apikey) : <code>String</code>
-    * [.app](#LogdnaLogger+app) : <code>String</code>
-    * [.host](#LogdnaLogger+host) : <code>String</code>
-    * [.apiurl](#LogdnaLogger+apiurl) : <code>String</code>
-    * [.log(msg, opts)](#LogdnaLogger+log)
+    * [.apikey](#LogdnaLogger+apikey) : [<code>Secret</code>](#Secret)
+    * [.app](#LogdnaLogger+app) : <code>string</code>
+    * [.host](#LogdnaLogger+host) : <code>string</code>
+    * [.apiurl](#LogdnaLogger+apiurl) : <code>string</code>
 
 <a name="new_LogdnaLogger_new"></a>
 
 ### new LogdnaLogger(apikey, app, file, opts)
 
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| apikey | <code>string</code> |  | – Your logdna api key |
-| app | <code>string</code> |  | – Name of the app under which the log messages should be categorized |
-| file | <code>string</code> |  | – Name of the file / subsystem under which   the log messages should be categorized |
-| opts | <code>Object</code> |  | – Configuration object. Options are also forwarded to the formatter |
-| [opts.level] | <code>string</code> | <code>&quot;silly&quot;</code> | The minimum log level to sent to logdna |
-| [opts.formatter] | [<code>MessageFormatter</code>](#MessageFormatter) | <code>messageFormatJson</code> | A formatter producing json |
-| [opts.host] | <code>string</code> | <code>&quot;&lt;system hostname&gt;&quot;</code> | The hostname under which to categorize the messages |
-| [opts.apiurl] | <code>string</code> | <code>&quot;https://logs.logdna.com&quot;</code> | where the logdna api is hosted. |
+| Param | Type | Description |
+| --- | --- | --- |
+| apikey | <code>string</code> \| [<code>Secret</code>](#Secret) | – Your logdna api key |
+| app | <code>string</code> | – Name of the app under which the log messages should be categorized |
+| file | <code>string</code> | – Name of the file(/subsystem) under which the    log messages should be categorized |
+| opts | <code>Object</code> | - `host`: Default is the system hostname; The hostname under which to categorize the messages   - `apiurl`: Default `https://logs.logdna.com`; The url under which the logdna api is hosted. |
 
-<a name="LogdnaLogger+level"></a>
-
-### logdnaLogger.level : <code>string</code>
-The minimum log level for messages to be printed.
-Feel free to change to one of the available levels.
-
-**Kind**: instance property of [<code>LogdnaLogger</code>](#LogdnaLogger)  
-<a name="LogdnaLogger+formatter"></a>
-
-### logdnaLogger.formatter : <code>function</code>
-Formatter used to format all the messages.
-Must yield an object suitable for passing to JSON.serialize
-
-**Kind**: instance property of [<code>LogdnaLogger</code>](#LogdnaLogger)  
-<a name="LogdnaLogger+fmtOpts"></a>
-
-### logdnaLogger.fmtOpts : <code>object</code>
-Options that will be passed to the formatter;
-Feel free to mutate or exchange.
-
-**Kind**: instance property of [<code>LogdnaLogger</code>](#LogdnaLogger)  
 <a name="LogdnaLogger+apikey"></a>
 
-### logdnaLogger.apikey : <code>String</code>
+### logdnaLogger.apikey : [<code>Secret</code>](#Secret)
 Name of the app under which the log messages should be categorized
 
 **Kind**: instance property of [<code>LogdnaLogger</code>](#LogdnaLogger)  
 <a name="LogdnaLogger+app"></a>
 
-### logdnaLogger.app : <code>String</code>
+### logdnaLogger.app : <code>string</code>
 Name of the app under which the log messages should be categorized
 
 **Kind**: instance property of [<code>LogdnaLogger</code>](#LogdnaLogger)  
 <a name="LogdnaLogger+host"></a>
 
-### logdnaLogger.host : <code>String</code>
+### logdnaLogger.host : <code>string</code>
 The hostname under which to categorize the messages
 
 **Kind**: instance property of [<code>LogdnaLogger</code>](#LogdnaLogger)  
 <a name="LogdnaLogger+apiurl"></a>
 
-### logdnaLogger.apiurl : <code>String</code>
+### logdnaLogger.apiurl : <code>string</code>
 The url under which the logdna api is hosted.
 
 **Kind**: instance property of [<code>LogdnaLogger</code>](#LogdnaLogger)  
-<a name="LogdnaLogger+log"></a>
+<a name="Secret"></a>
 
-### logdnaLogger.log(msg, opts)
-Actually print a log message
+## Secret
+Special wrapper that should be used to protect secret values.
 
-Implementations of this MUST NOT throw exceptions. Instead implementors
-ARE ADVISED to attempt to log the error using err() while employing some
-means to avoid recursively triggering the error. Loggers SHOULD fall back
-to logging with console.error.
+Effectively this tries to hide the actual payload so that the
+secret has to be explicitly extracted before using it.
 
-Even though loggers MUST NOT throw exceptions; users of this method SHOULD
-still catch any errors and handle them appropriately.
+```
+const mySecret = new Secret(42); // Create a secret
+mySecret.value; // => 42; extract the value
+mySecret.value = 64; // assign a new value
+```
 
-**Kind**: instance method of [<code>LogdnaLogger</code>](#LogdnaLogger)  
-**Implements**: [<code>log</code>](#Logger+log)  
+The secret can only be accessed through the .secret property
+in order to make sure that the access is not accidental;
+the secret property cannot be iterated over and the secret will
+not be leaked when converted to json or when printed.
 
-| Param | Type | Description |
-| --- | --- | --- |
-| msg | <code>Array</code> | The message; list of arguments as you would pass it to console.log |
-| opts | <code>Object</code> | – Configuration object; contains only one key at   the moment: `level` - The log level which can be one of `error, warn,   info, verbose` and `debug`. |
-
+**Kind**: global class  
 <a name="rootLogger"></a>
 
 ## rootLogger
 The logger all other loggers attach to.
 
-Must always contain a logger named 'default'; it is very much reccomended
+Must always contain a logger named 'default'; it is very much recommended
 that the default logger always be a console logger; this can serve as a good
 fallback in case other loggers fail.
 
+**Kind**: global constant  
+**Example**  
 ```js
 // Change the default logger
 rootLogger.loggers.set('default', new ConsoleLogger({level: 'debug'}));
@@ -842,14 +905,40 @@ rootLogger.loggers.set('default', new ConsoleLogger({level: 'debug'}));
 You should not log to the root logger directly; instead use one of the
 wrapper functions `log, fatal, err, warn, info, verbose, debug`; they
 perform some additional
-
-**Kind**: global constant  
 <a name="JsonifyForLog"></a>
 
 ## JsonifyForLog
 Trait used to serialize json objects to json. See jsonifyForLog.
 
 **Kind**: global constant  
+<a name="eraseBunyanDefaultFields"></a>
+
+## eraseBunyanDefaultFields(fields) ⇒ <code>Object</code>
+Remove the default fields emitted by buyan.
+
+These fields are added by bunyan by default but are often not of
+much interest (like name, bunyanLevel, or `v`) or can be easily added
+again later for data based loggers where this information might be
+valuable (e.g. hostname, pid).
+
+Use like this:
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| fields | <code>Object</code> | 
+
+**Example**  
+```
+const bunyan = require('bunyan');
+const { BunyanStreamInterface, eraseBunyanDefaultFields } = require('helix-log');
+
+const logger = bunyan.createLogger({name: 'helixLogger'});
+logger.addStream(BunyanStreamInterface.createStream({
+  filter: eraseBunyanDefaultFields
+}));
+```
 <a name="numericLogLevel"></a>
 
 ## numericLogLevel(name) ⇒ <code>number</code>
@@ -866,6 +955,21 @@ numeric equivalent. More pressing log levels have lower numbers.
 | Param | Type | Description |
 | --- | --- | --- |
 | name | <code>string</code> | Name of the log level |
+
+<a name="makeLogMessage"></a>
+
+## makeLogMessage([fields]) ⇒ [<code>Message</code>](#Message)
+Supplies default values for all the required fields in log messages.
+
+You may pass this a message that is just a string (as opposed to the
+usually required array of message components). The message will then automatically
+be wrapped in an array.
+
+**Kind**: global function  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| [fields] | <code>Object</code> | <code>{}</code> | User supplied field values; can overwrite   any default values |
 
 <a name="tryInspect"></a>
 
@@ -889,27 +993,18 @@ inspect is returned and the error is logged using `err()`.
 <a name="serializeMessage"></a>
 
 ## serializeMessage(msg, opts) ⇒ <code>string</code>
-This is a useful helper function that turns a message containing
-arbitrary objects (like you would hand to console.log) into a string.
-
-Leaves strings as is; uses `require('util').inspect(...)` on all other
-types and joins the parameters using space:
-
-Loggers writing to raw streams or to strings usually use this, however
-not all loggers require this; e.g. in a browser environment
-console.warn/log/error should be used as these enable the use of the
-visual object inspectors, at least in chrome and firefox.
+Turns the message field into a string.
 
 **Kind**: global function  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| msg | <code>Array</code> | – Parameters as you would pass them to console.log |
-| opts | <code>Object</code> | – Parameters are forwarded to util.inspect().   By default `{depth: null, breakLength: Infinity, colors: false}` is used. |
+| msg | <code>Array.&lt;\*&gt;</code> \| <code>undefined</code> | – Message components to serialize |
+| opts | <code>Object</code> | – Parameters are forwarded to tryInspect() |
 
 <a name="messageFormatSimple"></a>
 
-## messageFormatSimple(msg, opts) : [<code>MessageFormatter</code>](#MessageFormatter)
+## messageFormatSimple(fields) ⇒ [<code>MessageFormatter</code>](#MessageFormatter) \| <code>string</code>
 Simple message format: Serializes the message and prefixes it with
 the log level.
 
@@ -918,14 +1013,13 @@ easy to test with and contains no extra info.
 
 **Kind**: global function  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| msg | <code>Array</code> | – Parameters as you would pass them to console.log |
-| opts | <code>Object</code> | – Parameters are forwarded to serializeMessage; other than that:   - level: one of the log levels; this parameter is required. |
+| Param | Type |
+| --- | --- |
+| fields | [<code>Message</code>](#Message) | 
 
 <a name="messageFormatTechnical"></a>
 
-## messageFormatTechnical(msg, opts) : [<code>MessageFormatter</code>](#MessageFormatter)
+## messageFormatTechnical(fields) ⇒ [<code>MessageFormatter</code>](#MessageFormatter) \| <code>string</code>
 Message format that includes extra information; prefixes each messagej
 
 This is used by FileLogger by default for instance because if you
@@ -933,166 +1027,98 @@ work with many log files you need that sort of info.
 
 **Kind**: global function  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| msg | <code>Array</code> | – Parameters as you would pass them to console.log |
-| opts | <code>Object</code> | – Parameters are forwarded to serializeMessage; other than that:   - level: one of the log levels; this parameter is required. |
+| Param | Type |
+| --- | --- |
+| fields | [<code>Message</code>](#Message) | 
 
 <a name="messageFormatConsole"></a>
 
-## messageFormatConsole(msg, opts) : [<code>MessageFormatter</code>](#MessageFormatter)
+## messageFormatConsole(fields) ⇒ [<code>MessageFormatter</code>](#MessageFormatter) \| <code>string</code>
 Message format with coloring/formatting escape codes
 
 Designed for use in terminals.
 
 **Kind**: global function  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| msg | <code>Array</code> | – Parameters as you would pass them to console.log |
-| opts | <code>Object</code> | – Parameters are forwarded to serializeMessage; other than that:   - level: one of the log levels; this parameter is required. |
+| Param | Type |
+| --- | --- |
+| fields | [<code>Message</code>](#Message) | 
 
 <a name="messageFormatJson"></a>
 
-## messageFormatJson(msg, opts) : [<code>MessageFormatter</code>](#MessageFormatter)
-Message format that produces json.
-
-Designed for structured logging; e.g. Loggly.
-
-This produces an object that can be converted to JSON. It does not
-produce a string, but you can easily write an adapter like so:
-
-```
-const messageFormatJsonString = (...args) =>
-   JSON.stringify(messageFormatJson(...args));
-```
-
-You can also wrap this to provide extra default fields:
-
-```
-const messageFormatMyJson = (...args) => {
-   pid: process.pid,
-   ...JSON.stringify(messageFormatJson(...args)),
-}
-```
-
-If the last element in the message can be converted to json-like using
-jsonifyForLog, then all the resulting fields will be included in the json-like
-object generated.
-
-The field `message` is reserved. The fields `level` and `timestamp` are filled with
-default values.
-
-If the last object is an exception, it will be sent as { exception: $exception };
-this serves to facilitate searching for exceptions explicitly.
+## messageFormatJson(fields) ⇒ [<code>MessageFormatter</code>](#MessageFormatter) \| <code>Object</code>
+Use jsonifyForLog to turn the fields into something that
+can be converted to json.
 
 **Kind**: global function  
+**Oaram**: [<code>Message</code>](#Message) message the log message  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| msg | <code>Array</code> | – Parameters as you would pass them to console.log |
-| opts | <code>Object</code> | – Parameters are forwarded to serializeMessage; other than that:   - level: one of the log levels; this parameter is required. |
+| fields | <code>\*</code> | additional log fields |
 
-<a name="logWithOpts"></a>
+<a name="messageFormatJsonString"></a>
 
-## logWithOpts(msg, opts)
-Lot to the root logger; this is a wrapper around `rootLogger.log`
-that handles exceptions thrown by rootLogger.log.
+## messageFormatJsonString(fields) ⇒ [<code>MessageFormatter</code>](#MessageFormatter) \| <code>Object</code>
+Message format that produces & serialize json.
+
+Really just an alias for `JSON.stringify(messageFormatJson(fields))`.
 
 **Kind**: global function  
 
+| Param | Type |
+| --- | --- |
+| fields | [<code>Message</code>](#Message) | 
+
+<a name="__handleLoggingExceptions"></a>
+
+## \_\_handleLoggingExceptions(fields, logger, code) ⇒ [<code>Message</code>](#Message)
+Helper to wrap any block of code and handle it's async & sync exceptions.
+
+This will catch any exceptions/promise rejections and log them using the rootLogger.
+
+**Kind**: global function  
+**Access**: package  
+
 | Param | Type | Description |
 | --- | --- | --- |
-| msg | <code>Array</code> | – The message as you would hand it to console.log |
-| opts | <code>Object</code> | – Any options you would pass to rootLogger.log |
+| fields | <code>Object</code> | Fields to set in any error message (usually indicates which logger   was used) |
+| logger | [<code>Logger</code>](#Logger) | the logger to wrap |
+| code | <code>function</code> | The code to wrap |
 
 <a name="fatal"></a>
 
 ## fatal(...msg)
-Uses the currently installed logger to print a fatal error-message
+Log just a message to the rootLogger using the SimpleInterface.
+
+Alias for `new SimpleInterface().log(...msg)`.
+
+This is not a drop in replacement for console.log, since this
+does not support string interpolation using `%O/%f/...`, but should
+cover most use cases.
 
 **Kind**: global function  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
+| ...msg | <code>\*</code> | The message to write |
 
-<a name="error"></a>
+<a name="messageFormatJsonStatic"></a>
 
-## error(...msg)
-Uses the currently installed logger to print an error-message
+## messageFormatJsonStatic(fields) ⇒ <code>Object</code>
+Message format used for comparing logs in tests.
 
-**Kind**: global function  
+Pretty much just messageFormatJson, but removes the time stamp
+because that is hard to compare since it is different each time...
 
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="warn"></a>
-
-## warn(...msg)
-Uses the currently installed logger to print a warn message
+If other highly variable fields are added in the future (e.g. id = uuidgen())
+these shall be removed too.
 
 **Kind**: global function  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="log"></a>
-
-## log(...msg)
-Uses the currently installed logger to print an informational message
-
-**Kind**: global function  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="verbose"></a>
-
-## verbose(...msg)
-Uses the currently installed logger to print a verbose message
-
-**Kind**: global function  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="debug"></a>
-
-## debug(...msg)
-Uses the currently installed logger to print a message intended for debugging
-
-**Kind**: global function  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="trace"></a>
-
-## trace(...msg)
-Uses the currently installed logger to print a trace level message
-
-**Kind**: global function  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
-
-<a name="silly"></a>
-
-## silly(...msg)
-Uses the currently installed logger to print a silly level message
-
-**Kind**: global function  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | – The message as you would hand it to console.log |
+| Param | Type |
+| --- | --- |
+| fields | [<code>Message</code>](#Message) | 
 
 <a name="recordLogs"></a>
 
@@ -1103,17 +1129,6 @@ While the logger is recording, all other loggers are disabled.
 If this is not your desired behaviour, you can use the MemLogger
 manually.
 
-```
-const { assertEquals } = require('ferrum');
-const { recordLogs, info, err } = require('@adobe/helix-shared').log;
-
-const logs = recordLogs(() => {
-  info('Hello World\n');
-  err('Nooo')
-});
-assertEquals(logs, 'Hello World\n[ERROR] Nooo');
-```
-
 **Kind**: global function  
 **Returns**: <code>string</code> - The logs that where produced by the codee  
 
@@ -1122,22 +1137,26 @@ assertEquals(logs, 'Hello World\n[ERROR] Nooo');
 | opts | <code>Object</code> | – optional first parameter; options passed to MemLogger |
 | fn | <code>function</code> | The logs that this code emits will be recorded. |
 
+**Example**  
+```
+recordLogs(() => {
+  info('Hello World');
+  err('Nooo');
+});
+```
+
+will return something like this:
+
+```
+[
+  { level: 'info', message: 'Hello World', timestamp: '...' },
+  { level: 'error', message: 'Noo', timestamp: '...' }
+]
+```
 <a name="assertLogs"></a>
 
 ## assertLogs(opts, fn, logs)
 Assert that a piece of code produces a specific set of log messages.
-
-```
-const { assertLogs, info, err } = require('@adobe/helix-shared').log;
-
-assertLogs(() => {
-  info('Hello World\n');
-  err('Nooo')
-}, multiline(`
-  Hello World
-  [ERROR] Nooo
-`));
-```
 
 **Kind**: global function  
 
@@ -1147,27 +1166,28 @@ assertLogs(() => {
 | fn | <code>function</code> | The logs that this code emits will be recorded. |
 | logs | <code>string</code> |  |
 
+**Example**  
+```
+const { assertLogs, info, err } = require('@adobe/helix-shared').log;
+
+assertLogs(() => {
+  info('Hello World');
+  err('Nooo');
+}, [
+  { level: 'info', message: 'Hello World' },
+  { level: 'error', message: 'Noo' }
+]);
+```
 <a name="recordAsyncLogs"></a>
 
 ## recordAsyncLogs(opts, fn) ⇒ <code>string</code>
 Async variant of recordLogs.
 
-Note that using this is a bit dangerous;
-
-```
-const { assertEquals } = require('ferrum');
-const { recordAsyncLogs, info, err } = require('@adobe/helix-shared').log;
-
-const logs = await recordLogs(async () => {
-  info('Hello World\n');
-  await sleep(500);
-  err('Nooo')
-});
-assertEquals(logs, 'Hello World\n[ERROR] Nooo');
-```
+Note that using this is a bit dangerous as other async procedures
+may also emit log messages while this procedure is running
 
 **Kind**: global function  
-**Returns**: <code>string</code> - The logs that where produced by the codee  
+**Returns**: <code>string</code> - The logs that where produced by the code  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -1179,18 +1199,8 @@ assertEquals(logs, 'Hello World\n[ERROR] Nooo');
 ## assertAsyncLogs(opts, fn, logs)
 Async variant of assertLogs
 
-```
-const { assertAsyncLogs, info, err } = require('@adobe/helix-shared').log;
-
-await assertAsyncLogs(() => {
-  info('Hello World\n');
-  await sleep(500);
-  err('Nooo')
-}, multiline(`
-  Hello World
-  [ERROR] Nooo
-`));
-```
+Note that using this is a bit dangerous as other async procedures
+may also emit logs while this async procedure is running.
 
 **Kind**: global function  
 
@@ -1231,11 +1241,24 @@ Features a default converter for any exception/subclass of Error.
 
 <a name="MessageFormatter"></a>
 
-## MessageFormatter : <code>function</code>
-**Kind**: global typedef  
+## MessageFormatter ⇒ <code>\*</code>
+Most loggers take a message with `log()`, encode it and write it to some
+external resource.
 
-| Param | Type | Description |
-| --- | --- | --- |
-| msg | <code>Array</code> | – Parameters as you would pass them to console.log |
-| opts | <code>Object</code> | – Formatting options. |
+E.g. most Loggers (like ConsoleLogger, FileLogger, ...) write to a text
+oriented resource, so the message needs to be converted to text. This is
+what the formatter is for.
+
+Not all Loggers require text; some are field oriented (working with json
+compatible data), others like the MemLogger can handle arbitrary javascript
+objects, but still provide an optional formatter (in this case defaulted to
+the identity function – doing nothing) in case the user explicitly wishes
+to perform formatting.
+
+**Kind**: global typedef  
+**Returns**: <code>\*</code> - Whatever kind of type the Logger needs. Usually a string.  
+
+| Param | Type |
+| --- | --- |
+| fields | [<code>Message</code>](#Message) | 
 

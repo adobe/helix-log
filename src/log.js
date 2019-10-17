@@ -180,7 +180,7 @@ const tryInspect = (what, opts = {}) => {
  * Turns the message field into a string.
  *
  * @function
- * @param {*[]|undefined} msg – Message components to serialize
+ * @param {Array<*>|undefined} msg – Message components to serialize
  * @param {Object} opts – Parameters are forwarded to tryInspect()
  * @returns {string}
  */
@@ -220,7 +220,7 @@ const serializeMessage = (msg, opts = {}) => {
  *
  * @callback MessageFormatter
  * @param {Message} fields
- * @returns {Unknown} Whatever kind of type the Logger needs. Usually a string.
+ * @returns {*} Whatever kind of type the Logger needs. Usually a string.
  */
 
 /**
@@ -319,7 +319,8 @@ const messageFormatConsole = (fields) => {
  *
  * @function
  * @type MessageFormatter
- * @param {Message} fields
+ * @oaram {Message} message the log message
+ * @param {*} fields additional log fields
  * @returns {Object}
  */
 const messageFormatJson = ({ message, ...fields }) => jsonifyForLog({
@@ -346,8 +347,9 @@ const messageFormatJsonString = (fields) => JSON.stringify(messageFormatJson(fie
  *
  * @function
  * @package
- * @param {Object} errorFields Fields to set in any error message (usually
- *   indicates which logger was used)
+ * @param {Object} fields Fields to set in any error message (usually indicates which logger
+ *   was used)
+ * @param {Logger} logger the logger to wrap
  * @param {Function} code The code to wrap
  * @returns {Message}
  */
@@ -545,7 +547,7 @@ class FormattedLoggerBase extends LoggerBase {
  *
  * @implements Logger
  * @class
- *@param {Writable} [opts.stream=console._stderr] A writable stream to log to.
+ * @param {Writable} [opts.stream=console._stderr] A writable stream to log to.
  */
 class ConsoleLogger extends FormattedLoggerBase {
   /**
@@ -849,7 +851,6 @@ class SimpleInterface extends /* private */ InterfaceBase {
    * @alias errorFields
    * @alias fatalFields
    * @param {...*} msg The message to write
-   * @param {Object} fields
    */
   logFields(...msg) { this._logImpl('info', ...msg); }
   sillyFields(...msg) { this._logImpl('silly', ...msg); }
@@ -987,7 +988,6 @@ const silly = (...msg) => __globalLogImpl('silly', ...msg, {});
  * @alias error.fields
  * @alias fatal.fields
  * @param {...*} msg The message to write
- * @param {Object} fields
  */
 log.fields = (...msg) => __globalLogImpl('log', ...msg);
 fatal.fields = (...msg) => __globalLogImpl('fatal', ...msg);
