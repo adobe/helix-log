@@ -1,6 +1,6 @@
 # Helix Log Framework
 
-Logging framework used within the helix project.
+Logging framework used within the Helix Project.
 
 ## Status
 
@@ -46,11 +46,11 @@ error('You can log exceptions like this', new Error('This is a problem'));
 
 <dl>
 <dt><a href="#BunyanStreamInterface">BunyanStreamInterface</a></dt>
-<dd><p>Bunyan stream that can be used to forward any bunyan messages
-to helix log.</p>
+<dd><p>Bunyan stream that can be used to forward any Bunyan messages
+to Helix log.</p>
 </dd>
 <dt><a href="#CoralogixLogger">CoralogixLogger</a></dt>
-<dd><p>Sends log messages to the coralogix logging service.</p>
+<dd><p>Sends log messages to the Coralogix logging service.</p>
 </dd>
 <dt><a href="#LoggerBase">LoggerBase</a></dt>
 <dd><p>Can be used as a base class/helper for implementing loggers.</p>
@@ -67,14 +67,14 @@ require a formatter.</p>
 the formatter before invoking _logImpl.</p>
 </dd>
 <dt><a href="#ConsoleLogger">ConsoleLogger</a></dt>
-<dd><p>Logger that is especially designed to be used in node.js
+<dd><p>Logger that is especially designed to be used in Node.js
 Print&#39;s to stderr; Marks errors, warns &amp; debug messages
 with a colored <code>[ERROR]</code>/... prefix.</p>
 <p>Formatter MUST produce strings. Default formatter is messageFormatConsole.</p>
 </dd>
 <dt><a href="#MultiLogger">MultiLogger</a></dt>
 <dd><p>Simple logger that forwards all messages to the underlying loggers.</p>
-<p>This maintains an es6 map called loggers. Consumers of this API are
+<p>This maintains an ES6 map called loggers. Consumers of this API are
 explicitly permitted to mutate this map or replace it all together in
 order to add, remove or alter logger.</p>
 </dd>
@@ -83,8 +83,8 @@ order to add, remove or alter logger.</p>
 <p>This logger is synchronous: It uses blocking syscalls and thus guarantees
 that all data is written even if process.exit() is called immediately after
 logging.
-For normal files this is not a problem as linux will never block when writing
-to files, for sockets, pipes and ttys this might block the process for a considerable
+For normal files this is not a problem as Linux will never block when writing
+to files, however for sockets, pipes and ttys this might block the process for a considerable
 time.</p>
 <p>Formatter MUST produce strings. Default formatter is messageFormatTechnical.</p>
 </dd>
@@ -106,7 +106,7 @@ error handler that will log any errors using the rootLogger.</p>
 specify both a message and custom fields to the underlying logger.</p>
 </dd>
 <dt><a href="#LogdnaLogger">LogdnaLogger</a></dt>
-<dd><p>Sends log messages to the logdna logging service.</p>
+<dd><p>Sends log messages to the LogDNA logging service.</p>
 <p>Log messages are sent immediately.</p>
 </dd>
 <dt><a href="#Secret">Secret</a></dt>
@@ -118,7 +118,7 @@ mySecret.value; // =&gt; 42; extract the value
 mySecret.value = 64; // assign a new value</code></pre><p>The secret can only be accessed through the .secret property
 in order to make sure that the access is not accidental;
 the secret property cannot be iterated over and the secret will
-not be leaked when converted to json or when printed.</p>
+not be leaked when converted to JSON or when printed.</p>
 </dd>
 </dl>
 
@@ -128,7 +128,7 @@ not be leaked when converted to json or when printed.</p>
 <dt><a href="#rootLogger">rootLogger</a></dt>
 <dd><p>The logger all other loggers attach to.</p>
 <p>Must always contain a logger named &#39;default&#39;; it is very much recommended
-that the default logger always be a console logger; this can serve as a good
+that the default logger always be a console logger, since this can serve as a good
 fallback in case other loggers fail.</p>
 </dd>
 <dt><a href="#JsonifyForLog">JsonifyForLog</a></dt>
@@ -141,7 +141,7 @@ fallback in case other loggers fail.</p>
 <dl>
 <dt><a href="#eraseBunyanDefaultFields">eraseBunyanDefaultFields(fields)</a> ⇒ <code>Object</code></dt>
 <dd><p>Remove the default fields emitted by buyan.</p>
-<p>These fields are added by bunyan by default but are often not of
+<p>These fields are added by Bunyan by default but are often not of
 much interest (like name, bunyanLevel, or <code>v</code>) or can be easily added
 again later for data based loggers where this information might be
 valuable (e.g. hostname, pid).</p>
@@ -185,7 +185,7 @@ work with many log files you need that sort of info.</p>
 </dd>
 <dt><a href="#messageFormatJson">messageFormatJson(fields)</a> ⇒ <code><a href="#MessageFormatter">MessageFormatter</a></code> | <code>Object</code></dt>
 <dd><p>Use jsonifyForLog to turn the fields into something that
-can be converted to json.</p>
+can be converted to JSON.</p>
 </dd>
 <dt><a href="#messageFormatJsonString">messageFormatJsonString(fields)</a> ⇒ <code><a href="#MessageFormatter">MessageFormatter</a></code> | <code>Object</code></dt>
 <dd><p>Message format that produces &amp; serialize json.</p>
@@ -230,12 +230,12 @@ may also emit logs while this async procedure is running.</p>
 </dd>
 <dt><a href="#jsonifyForLog">jsonifyForLog(what)</a> ⇒ <code>*</code></dt>
 <dd><p>jsonify the given data using the JsonifyForLog trait.</p>
-<p>Takes any javascript object and produces an object tree
-that only contains json compatible objects (objects, arrays,
+<p>Takes any Javascript object and produces an object tree
+that only contains JSON compatible objects (objects, arrays,
 numbers, bools, strings and such).</p>
 <p>This is a no-op if the input is already json compatible.</p>
 <p>Note that this is specifically designed to serialize data for structured
-logging. This is NOT suitable for proper serialization of json; specifically
+logging. This is NOT suitable for proper serialization of JSON; specifically
 this may loose information in cases where that makes sense.</p>
 <p>Features a default converter for any exception/subclass of Error.</p>
 </dd>
@@ -247,9 +247,7 @@ this may loose information in cases where that makes sense.</p>
 <dt><a href="#MessageFormatter">MessageFormatter</a> ⇒ <code>*</code></dt>
 <dd><p>Most loggers take a message with <code>log()</code>, encode it and write it to some
 external resource.</p>
-<p>E.g. most Loggers (like ConsoleLogger, FileLogger, ...) write to a text
-oriented resource, so the message needs to be converted to text. This is
-what the formatter is for.</p>
+<p>For example, most Loggers (like ConsoleLogger, FileLogger, ...) write to a text-oriented resource, so the message needs to be converted to text. This is what the formatter is for.</p>
 <p>Not all Loggers require text; some are field oriented (working with json
 compatible data), others like the MemLogger can handle arbitrary javascript
 objects, but still provide an optional formatter (in this case defaulted to
@@ -262,12 +260,12 @@ to perform formatting.</p>
 
 <dl>
 <dt><a href="#Message">Message</a></dt>
-<dd><p>Internally helix log passe these messages around.</p>
+<dd><p>Internally helix log passes these messages around.</p>
 <p>Messages are just plain objects with some conventions
 regarding their fields:</p>
 </dd>
 <dt><a href="#Logger">Logger</a></dt>
-<dd><p>Loggers are used to write log message.</p>
+<dd><p>Loggers are used to write a log message.</p>
 <p>These receive a message via their log() method and forward
 the message to some external resource or other loggers in
 the case of MultiLogger.</p>
@@ -282,7 +280,7 @@ interface either as specified here, or not at all.</p>
 <p>Loggers SHOULD provide a named constructor option &#39;level&#39; and associated field
 that can be used to limit logging to messages to those with a sufficiently
 high log level.</p>
-<p>Loggers SHOULD provide a named constructor option &#39;filter&#39; and associated field
+<p>Loggers SHOULD provide a named constructor option &#39;filter&#39; and the associated field
 that can be used to transform messages arbitrarily. This option should default to
 the <code>identity()</code> function from ferrum. If the filter returns <code>undefined</code>
 the message MUST be discarded.</p>
@@ -290,7 +288,7 @@ the message MUST be discarded.</p>
 format, they SHOULD also provide an option &#39;formatter&#39; and associated field
 that is used to produce the external format. This formatter SHOULD be set
 to a sane default.</p>
-<p>Helix-log provides some built-in formatters e.g. for plain text, json and
+<p>Helix-log provides some built-in formatters e.g. for plain text, JSON and
 for consoles supporting ANSI escape sequences.</p>
 </dd>
 <dt><a href="#LoggingInterface">LoggingInterface</a></dt>
@@ -329,7 +327,7 @@ the message MUST be discarded.</p>
 <a name="Message"></a>
 
 ## Message
-Internally helix log passe these messages around.
+Internally helix log passes these messages around.
 
 Messages are just plain objects with some conventions
 regarding their fields:
@@ -374,7 +372,7 @@ const myMessage = {
 <a name="Logger"></a>
 
 ## Logger
-Loggers are used to write log message.
+Loggers are used to write log messages.
 
 These receive a message via their log() method and forward
 the message to some external resource or other loggers in
