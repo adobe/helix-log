@@ -1,3 +1,10 @@
+# [3.1.0](https://github.com/adobe/helix-log/compare/v3.0.0...v3.1.0) (2019-11-08)
+
+
+### Features
+
+* Increase resolution of timestamps to nanoseconds ([a7860f9](https://github.com/adobe/helix-log/commit/a7860f9deb672a0e70968f496716cfd6393550a8)), closes [#43](https://github.com/adobe/helix-log/issues/43)
+
 # [3.0.0](https://github.com/adobe/helix-log/compare/v2.2.2...v3.0.0) (2019-10-16)
 
 
