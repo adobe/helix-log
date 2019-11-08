@@ -25,7 +25,7 @@ const {
   options: coloretteOpts,
 } = require('colorette');
 const {
-  join, pipe, map, identity, isdef, size, exec, type, list, last,
+  join, pipe, map, identity, size, exec, type, list, last,
 } = require('ferrum');
 const {
   numericLogLevel, serializeMessage, ConsoleLogger, rootLogger,
@@ -33,7 +33,7 @@ const {
   FileLogger, MemLogger, MultiLogger, messageFormatSimple,
   messageFormatTechnical, messageFormatConsole, messageFormatJson,
   silly, log, messageFormatJsonStatic, SimpleInterface, makeLogMessage,
-  assertLogs,
+  assertLogs, BigDate,
 } = require('../src');
 const { ckEq, ckThrows } = require('./util');
 
@@ -141,19 +141,26 @@ it('messageFormatSimple', () => {
 
 it('messageFormatTechnical', () => {
   const ck = (fields, exp) => {
-    const ser = messageFormatTechnical(makeLogMessage(fields));
+    const t = new BigDate();
+    const msg = makeLogMessage(fields);
+
     // Discard the time (because it's hard to test for that)
-    const [_, level, msg] = ser.match(/^\[(\w*) \d{4}-\d\d-\d\d \d\d:\d\d:\d\d.\d+ [+-]\d\d:\d\d\] (.*)$/) || [];
-    assert(isdef(msg) && isdef(level));
-    ckEq(`[${level}] ${msg}`, exp);
+    const ser = messageFormatTechnical(msg);
+    const [_a, level, date, txt] = ser.match(/^\[(\S+) (\S+ \S+ \S+)\] (.*)/) || [];
+
+    ckEq(level, msg.level.toUpperCase());
+    ckEq(txt, exp);
+    assert(new BigDate(date).preciseTime()
+      .minus(t.preciseTime())
+      .lt(1.0));
   };
   ck(
     { message: ['Hello ', { foo: 42 }, ' World'] },
-    '[INFO] Hello { foo: 42 } World',
+    'Hello { foo: 42 } World',
   );
   ck(
     { message: ['Hello ', { foo: 42 }, ' World'], level: 'error', bar: 23 },
-    '[ERROR] Hello { foo: 42 } World { bar: 23 }',
+    'Hello { foo: 42 } World { bar: 23 }',
   );
 });
 

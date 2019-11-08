@@ -14,16 +14,16 @@
 /* eslint-disable consistent-return, lines-between-class-members, implicit-arrow-linebreak */
 
 const { assign } = Object;
-const { abs, floor } = Math;
 const { inspect } = require('util');
 const {
   black, bgRed, bgYellow, bgBlackBright, bgBlueBright,
 } = require('colorette');
 const {
-  dict, exec, isdef, each, join, type, list, take, size, identity,
-  repeat, intersperse, typename, empty, eq, pipe, map,
+  dict, exec, isdef, each, join, type, list, identity,
+  intersperse, typename, empty, eq, pipe, map,
 } = require('ferrum');
 const { openSync, closeSync, writeSync } = require('fs');
+const { BigDate } = require('./big-date');
 const { jsonifyForLog } = require('./serialize-json');
 
 // This is the superset of log levels supported by console, bunyan and winston
@@ -48,6 +48,7 @@ const __loglevelMap = {
  */
 const numericLogLevel = (name) => {
   const r = __loglevelMap[name];
+  /* istanbul ignore next */
   if (r === undefined) {
     throw new Error(`Not a valid log level: ${name}`);
   }
@@ -68,7 +69,7 @@ numericLogLevel.__loglevelMap = __loglevelMap;
  *   // REQUIRED
  *
  *   level: 'info',
- *   timestamp: new Date(),
+ *   timestamp: new BigDate(), // Can also be a normal Date
  *
  *   // OPTIONAL
  *
@@ -117,7 +118,7 @@ numericLogLevel.__loglevelMap = __loglevelMap;
 const makeLogMessage = (fields = {}) => {
   const r = {
     level: 'info',
-    timestamp: new Date(),
+    timestamp: new BigDate(),
     ...fields,
   };
   if ('message' in r) {
@@ -243,7 +244,8 @@ const messageFormatSimple = (fields) => {
 };
 
 /**
- * Message format that includes extra information; prefixes each messagej
+ * Message format that includes extra information; prefixes each message
+ * with the time stamp and the log level.
  *
  * This is used by FileLogger by default for instance because if you
  * work with many log files you need that sort of info.
@@ -257,21 +259,10 @@ const messageFormatTechnical = (fields) => {
   const {
     level, timestamp, message, ...rest
   } = fields;
-  const digit = (v, n) => {
-    const num = String(v);
-    const pref = join(take(repeat('0'), n - size(num)), '');
-    return pref + num;
-  };
 
-  const d = timestamp;
-  const tz = d.getTimezoneOffset();
-  /* istanbul ignore next */
-  const pref = [ // [LEVEL YYYY-MM-DD hh:mm:ss.millis +tzh:tzm]
-    level.toUpperCase(),
-    `${d.getFullYear()}-${digit(d.getMonth(), 2)}-${digit(d.getDay(), 2)}`,
-    `${digit(d.getHours(), 2)}:${digit(d.getMinutes(), 2)}:${digit(d.getSeconds(), 2)}.${digit(d.getMilliseconds(), 3)}`,
-    `${tz > 0 ? '+' : '-'}${digit(abs(floor(tz / 60)), 2)}:${digit(abs(tz % 60), 2)}`,
-  ];
+  // Timestamp with extra spaces
+  const ts = timestamp.toISOString().replace(/T|(?=Z)|(?=[+-]\d+$)/g, ' ');
+  const pref = [level.toUpperCase(), ts];
 
   const fullMsg = empty(rest) ? message : [...message, ' ', rest];
   return `[${join(pref, ' ')}] ${serializeMessage(fullMsg)}`;
@@ -803,6 +794,7 @@ class InterfaceBase {
 class SimpleInterface extends /* private */ InterfaceBase {
   _logImpl(level, ...msg) {
     const fields = msg.pop();
+    /* istanbul ignore next */
     if (type(fields) !== Object) {
       throw new Error('Data given as the last argument the helix-log '
         + `SimpleInterface must be a plain Object, not a ${typename(type(fields))}.`);
@@ -921,6 +913,7 @@ let __globalRootLoggerWriteCount = 0;
 const __globalLogImpl = (lvl, ...msg) => {
   let ex;
 
+  /* istanbul ignore next */
   try {
     __globalRootLoggerWriteCount = 0;
     new SimpleInterface()._logImpl(lvl, ...msg);
@@ -928,6 +921,7 @@ const __globalLogImpl = (lvl, ...msg) => {
     ex = e;
   }
 
+  /* istanbul ignore next */
   if (ex !== undefined) {
     console.error('Utter failure logging because:', tryInspect(ex));
   }
@@ -935,6 +929,7 @@ const __globalLogImpl = (lvl, ...msg) => {
   const logFailure = ex !== undefined
     || type(rootLogger.loggers) !== Map
     || (__globalLogImpl.fwdCount === 0 && rootLogger.loggers.size === 0);
+  /* istanbul ignore next */
   if (logFailure) {
     console.error('Utter failure logging message:', serializeMessage(msg));
   }

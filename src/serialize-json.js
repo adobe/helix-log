@@ -75,8 +75,12 @@ JsonifyForLog.implWild((wild) => {
 });
 // Fallback exporter
 JsonifyForLog.implWild(() => (what) => {
-  const o = jsonifyForLog(obj(Object.entries(what)));
-  return { $type: typename(type(what)), ...o };
+  if (type(what.toJSON) === Function) {
+    return what.toJSON();
+  } else {
+    const o = jsonifyForLog(obj(Object.entries(what)));
+    return { $type: typename(type(what)), ...o };
+  }
 });
 
 module.exports = { jsonifyForLog, JsonifyForLog };

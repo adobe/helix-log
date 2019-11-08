@@ -16,6 +16,7 @@ const { exec, isdef } = require('ferrum');
 const pkgJson = require('../package.json');
 
 module.exports = {
+  ...require('./big-date'),
   ...require('./recording'),
   ...require('./log'),
   ...require('./serialize-json'),
