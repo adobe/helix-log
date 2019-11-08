@@ -21,7 +21,6 @@ module.exports = {
   ...require('./log'),
   ...require('./serialize-json'),
   ...require('./coralogix'),
-  ...require('./logdna'),
   ...require('./bunyan'),
   ...require('./secret'),
 };
