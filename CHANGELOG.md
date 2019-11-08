@@ -1,3 +1,15 @@
+# [4.0.0](https://github.com/adobe/helix-log/compare/v3.1.0...v4.0.0) (2019-11-08)
+
+
+### chore
+
+* Get rid of logdna ([1b7ce3f](https://github.com/adobe/helix-log/commit/1b7ce3f29f08dc759a0435f562b377c4a667b049))
+
+
+### BREAKING CHANGES
+
+* We don't use them and they did not get back to us.
+
 # [3.1.0](https://github.com/adobe/helix-log/compare/v3.0.0...v3.1.0) (2019-11-08)
 
 
