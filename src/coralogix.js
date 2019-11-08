@@ -15,6 +15,7 @@ const { hostname } = require('os');
 const path = require('path');
 const phin = require('phin');
 const { messageFormatJsonString, FormattedLoggerBase } = require('./log');
+const { BigDate } = require('./big-date');
 const { Secret } = require('./secret');
 
 const _logLevelMapping = {
@@ -116,7 +117,7 @@ class CoralogixLogger extends FormattedLoggerBase {
         subsystemName: this.subsystem,
         computerName: this.host,
         logEntries: [{
-          timestamp: fields.timestamp.getTime(),
+          timestamp: Number(BigDate.preciseTime(fields.timestamp)),
           text: payload,
           severity: _logLevelMapping[fields.level],
         }],
