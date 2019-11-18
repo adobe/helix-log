@@ -1,6 +1,6 @@
 # Helix Log Framework
 
-Logging framework used within the Helix Project.
+Logging framework used within the helix project.
 
 ## Status
 
@@ -45,12 +45,14 @@ error('You can log exceptions like this', new Error('This is a problem'));
 ## Classes
 
 <dl>
+<dt><a href="#The default constructor can be used to get the current point in time as a BigDate.">The default constructor can be used to get the current point in time as a BigDate.</a></dt>
+<dd></dd>
 <dt><a href="#BunyanStreamInterface">BunyanStreamInterface</a></dt>
-<dd><p>Bunyan stream that can be used to forward any Bunyan messages
-to Helix log.</p>
+<dd><p>Bunyan stream that can be used to forward any bunyan messages
+to helix log.</p>
 </dd>
 <dt><a href="#CoralogixLogger">CoralogixLogger</a></dt>
-<dd><p>Sends log messages to the Coralogix logging service.</p>
+<dd><p>Sends log messages to the coralogix logging service.</p>
 </dd>
 <dt><a href="#LoggerBase">LoggerBase</a></dt>
 <dd><p>Can be used as a base class/helper for implementing loggers.</p>
@@ -67,14 +69,14 @@ require a formatter.</p>
 the formatter before invoking _logImpl.</p>
 </dd>
 <dt><a href="#ConsoleLogger">ConsoleLogger</a></dt>
-<dd><p>Logger that is especially designed to be used in Node.js
+<dd><p>Logger that is especially designed to be used in node.js
 Print&#39;s to stderr; Marks errors, warns &amp; debug messages
 with a colored <code>[ERROR]</code>/... prefix.</p>
 <p>Formatter MUST produce strings. Default formatter is messageFormatConsole.</p>
 </dd>
 <dt><a href="#MultiLogger">MultiLogger</a></dt>
 <dd><p>Simple logger that forwards all messages to the underlying loggers.</p>
-<p>This maintains an ES6 map called loggers. Consumers of this API are
+<p>This maintains an es6 map called loggers. Consumers of this API are
 explicitly permitted to mutate this map or replace it all together in
 order to add, remove or alter logger.</p>
 </dd>
@@ -83,8 +85,8 @@ order to add, remove or alter logger.</p>
 <p>This logger is synchronous: It uses blocking syscalls and thus guarantees
 that all data is written even if process.exit() is called immediately after
 logging.
-For normal files this is not a problem as Linux will never block when writing
-to files, however for sockets, pipes and ttys this might block the process for a considerable
+For normal files this is not a problem as linux will never block when writing
+to files, for sockets, pipes and ttys this might block the process for a considerable
 time.</p>
 <p>Formatter MUST produce strings. Default formatter is messageFormatTechnical.</p>
 </dd>
@@ -105,10 +107,6 @@ error handler that will log any errors using the rootLogger.</p>
 <dd><p>The fields interface provides the ability to conveniently
 specify both a message and custom fields to the underlying logger.</p>
 </dd>
-<dt><a href="#LogdnaLogger">LogdnaLogger</a></dt>
-<dd><p>Sends log messages to the LogDNA logging service.</p>
-<p>Log messages are sent immediately.</p>
-</dd>
 <dt><a href="#Secret">Secret</a></dt>
 <dd><p>Special wrapper that should be used to protect secret values.</p>
 <p>Effectively this tries to hide the actual payload so that the
@@ -118,7 +116,7 @@ mySecret.value; // =&gt; 42; extract the value
 mySecret.value = 64; // assign a new value</code></pre><p>The secret can only be accessed through the .secret property
 in order to make sure that the access is not accidental;
 the secret property cannot be iterated over and the secret will
-not be leaked when converted to JSON or when printed.</p>
+not be leaked when converted to json or when printed.</p>
 </dd>
 </dl>
 
@@ -128,7 +126,7 @@ not be leaked when converted to JSON or when printed.</p>
 <dt><a href="#rootLogger">rootLogger</a></dt>
 <dd><p>The logger all other loggers attach to.</p>
 <p>Must always contain a logger named &#39;default&#39;; it is very much recommended
-that the default logger always be a console logger, since this can serve as a good
+that the default logger always be a console logger; this can serve as a good
 fallback in case other loggers fail.</p>
 </dd>
 <dt><a href="#JsonifyForLog">JsonifyForLog</a></dt>
@@ -141,7 +139,7 @@ fallback in case other loggers fail.</p>
 <dl>
 <dt><a href="#eraseBunyanDefaultFields">eraseBunyanDefaultFields(fields)</a> ⇒ <code>Object</code></dt>
 <dd><p>Remove the default fields emitted by buyan.</p>
-<p>These fields are added by Bunyan by default but are often not of
+<p>These fields are added by bunyan by default but are often not of
 much interest (like name, bunyanLevel, or <code>v</code>) or can be easily added
 again later for data based loggers where this information might be
 valuable (e.g. hostname, pid).</p>
@@ -175,7 +173,8 @@ the log level.</p>
 easy to test with and contains no extra info.</p>
 </dd>
 <dt><a href="#messageFormatTechnical">messageFormatTechnical(fields)</a> ⇒ <code><a href="#MessageFormatter">MessageFormatter</a></code> | <code>string</code></dt>
-<dd><p>Message format that includes extra information; prefixes each messagej</p>
+<dd><p>Message format that includes extra information; prefixes each message
+with the time stamp and the log level.</p>
 <p>This is used by FileLogger by default for instance because if you
 work with many log files you need that sort of info.</p>
 </dd>
@@ -185,11 +184,17 @@ work with many log files you need that sort of info.</p>
 </dd>
 <dt><a href="#messageFormatJson">messageFormatJson(fields)</a> ⇒ <code><a href="#MessageFormatter">MessageFormatter</a></code> | <code>Object</code></dt>
 <dd><p>Use jsonifyForLog to turn the fields into something that
-can be converted to JSON.</p>
+can be converted to json.</p>
 </dd>
 <dt><a href="#messageFormatJsonString">messageFormatJsonString(fields)</a> ⇒ <code><a href="#MessageFormatter">MessageFormatter</a></code> | <code>Object</code></dt>
 <dd><p>Message format that produces &amp; serialize json.</p>
 <p>Really just an alias for <code>JSON.stringify(messageFormatJson(fields))</code>.</p>
+</dd>
+<dt><a href="#deriveLogger">deriveLogger(logger, opts)</a> ⇒ <code><a href="#Logger">Logger</a></code></dt>
+<dd><p>Helper function that creates a derived logger that is derived from a given logger, merging
+the given options. All the properties are shallow copied to the new logger With the exception of
+the <code>defaultFields</code>, where the <code>defaultFields</code> object itself is shallow-copied. Thus allowing to
+<em>extend</em> the default fields.</p>
 </dd>
 <dt><a href="#__handleLoggingExceptions">__handleLoggingExceptions(fields, logger, code)</a> ⇒ <code><a href="#Message">Message</a></code></dt>
 <dd><p>Helper to wrap any block of code and handle it&#39;s async &amp; sync exceptions.</p>
@@ -230,12 +235,12 @@ may also emit logs while this async procedure is running.</p>
 </dd>
 <dt><a href="#jsonifyForLog">jsonifyForLog(what)</a> ⇒ <code>*</code></dt>
 <dd><p>jsonify the given data using the JsonifyForLog trait.</p>
-<p>Takes any Javascript object and produces an object tree
-that only contains JSON compatible objects (objects, arrays,
+<p>Takes any javascript object and produces an object tree
+that only contains json compatible objects (objects, arrays,
 numbers, bools, strings and such).</p>
 <p>This is a no-op if the input is already json compatible.</p>
 <p>Note that this is specifically designed to serialize data for structured
-logging. This is NOT suitable for proper serialization of JSON; specifically
+logging. This is NOT suitable for proper serialization of json; specifically
 this may loose information in cases where that makes sense.</p>
 <p>Features a default converter for any exception/subclass of Error.</p>
 </dd>
@@ -247,7 +252,9 @@ this may loose information in cases where that makes sense.</p>
 <dt><a href="#MessageFormatter">MessageFormatter</a> ⇒ <code>*</code></dt>
 <dd><p>Most loggers take a message with <code>log()</code>, encode it and write it to some
 external resource.</p>
-<p>For example, most Loggers (like ConsoleLogger, FileLogger, ...) write to a text-oriented resource, so the message needs to be converted to text. This is what the formatter is for.</p>
+<p>E.g. most Loggers (like ConsoleLogger, FileLogger, ...) write to a text
+oriented resource, so the message needs to be converted to text. This is
+what the formatter is for.</p>
 <p>Not all Loggers require text; some are field oriented (working with json
 compatible data), others like the MemLogger can handle arbitrary javascript
 objects, but still provide an optional formatter (in this case defaulted to
@@ -260,12 +267,12 @@ to perform formatting.</p>
 
 <dl>
 <dt><a href="#Message">Message</a></dt>
-<dd><p>Internally helix log passes these messages around.</p>
+<dd><p>Internally helix log passe these messages around.</p>
 <p>Messages are just plain objects with some conventions
 regarding their fields:</p>
 </dd>
 <dt><a href="#Logger">Logger</a></dt>
-<dd><p>Loggers are used to write a log message.</p>
+<dd><p>Loggers are used to write log message.</p>
 <p>These receive a message via their log() method and forward
 the message to some external resource or other loggers in
 the case of MultiLogger.</p>
@@ -280,15 +287,18 @@ interface either as specified here, or not at all.</p>
 <p>Loggers SHOULD provide a named constructor option &#39;level&#39; and associated field
 that can be used to limit logging to messages to those with a sufficiently
 high log level.</p>
-<p>Loggers SHOULD provide a named constructor option &#39;filter&#39; and the associated field
+<p>Loggers SHOULD provide a named constructor option &#39;filter&#39; and associated field
 that can be used to transform messages arbitrarily. This option should default to
 the <code>identity()</code> function from ferrum. If the filter returns <code>undefined</code>
 the message MUST be discarded.</p>
+<p>Loggers SHOULD provide a named constructor option &#39;defaultFields&#39;; if they do support the
+property they MUST perform a shallow merge/setdefault into the message AFTER applying the
+filters.</p>
 <p>If loggers send messages to some external resource not supporting the Message
 format, they SHOULD also provide an option &#39;formatter&#39; and associated field
 that is used to produce the external format. This formatter SHOULD be set
 to a sane default.</p>
-<p>Helix-log provides some built-in formatters e.g. for plain text, JSON and
+<p>Helix-log provides some built-in formatters e.g. for plain text, json and
 for consoles supporting ANSI escape sequences.</p>
 </dd>
 <dt><a href="#LoggingInterface">LoggingInterface</a></dt>
@@ -321,13 +331,16 @@ high log level.</p>
 that can be used to transform messages arbitrarily. This option should default to
 the <code>identity()</code> function from ferrum. If the filter returns <code>undefined</code>
 the message MUST be discarded.</p>
+<p>LoggingInterfaces SHOULD provide a named constructor option &#39;defaultFields&#39;; if they do support
+the property they MUST perform a shallow merge/setdefault into the message AFTER applying the
+filters.</p>
 </dd>
 </dl>
 
 <a name="Message"></a>
 
 ## Message
-Internally helix log passes these messages around.
+Internally helix log passe these messages around.
 
 Messages are just plain objects with some conventions
 regarding their fields:
@@ -339,7 +352,7 @@ const myMessage = {
   // REQUIRED
 
   level: 'info',
-  timestamp: new Date(),
+  timestamp: new BigDate(), // Can also be a normal Date
 
   // OPTIONAL
 
@@ -372,7 +385,7 @@ const myMessage = {
 <a name="Logger"></a>
 
 ## Logger
-Loggers are used to write log messages.
+Loggers are used to write log message.
 
 These receive a message via their log() method and forward
 the message to some external resource or other loggers in
@@ -399,6 +412,10 @@ Loggers SHOULD provide a named constructor option 'filter' and associated field
 that can be used to transform messages arbitrarily. This option should default to
 the `identity()` function from ferrum. If the filter returns `undefined`
 the message MUST be discarded.
+
+Loggers SHOULD provide a named constructor option 'defaultFields'; if they do support the
+property they MUST perform a shallow merge/setdefault into the message AFTER applying the
+filters.
 
 If loggers send messages to some external resource not supporting the Message
 format, they SHOULD also provide an option 'formatter' and associated field
@@ -468,7 +485,92 @@ that can be used to transform messages arbitrarily. This option should default t
 the `identity()` function from ferrum. If the filter returns `undefined`
 the message MUST be discarded.
 
+LoggingInterfaces SHOULD provide a named constructor option 'defaultFields'; if they do support
+the property they MUST perform a shallow merge/setdefault into the message AFTER applying the
+filters.
+
 **Kind**: global interface  
+<a name="The default constructor can be used to get the current point in time as a BigDate."></a>
+
+## The default constructor can be used to get the current point in time as a BigDate.
+**Kind**: global class  
+**Implements**: <code>Equals</code>, <code>Deepclone</code>, <code>Shallowclone</code>  
+<a name="new_The default constructor can be used to get the current point in time as a BigDate._new"></a>
+
+### new The default constructor can be used to get the current point in time as a BigDate.(Converts, Construct, Construct, ...Can)
+A Date class capable of storing timestamps at arbitrary precisions that can
+be used as a drop-in replacement for date.
+
+When generating timestamps at quick succession `Date` will often yield the
+same result:
+
+```js
+const assert = require('assert');
+const a = new Date();
+const b = new Date();
+assert.strictEqual(a.toISOString(), b.toISOString())
+```
+
+This is often problematic. E.g. in the case of helix-log this can lead to log
+messages being displayed out of order. Using `process.hrtime()` is not an option
+either because it's time stamps are only really valid on the same process.
+
+In order to remedy this problem, helix-log was created: It measures time at a very
+high precision (nano seconds) while maintaining a reference to corordinated universal time
+
+```js
+const assert = require('assert');
+const { BigDate } = require('@adobe/helixLog')
+const a = new BigDate();
+const b = new BigDate();
+assert.notStrictEqual(a.toISOString(), b.toISOString());
+```
+
+# Precision in relation to Corordinated Universal Time
+
+Mostly depends on how well synchronized the system clock is…usually between 20ms and 200ms.
+This goes for both Date as well as BigDate, although BigDate can add up to 1ms of extra error.
+
+# Precision in relation to Date
+
+BigDate can add up to 1ms out of sync with Date.
+
+When measuring comparing `BigDate.preciseTime()` and `Date.getTime()` you may
+find differences of up to 2.5ms due to the imprecision of measurement.
+
+# Precision in relation to hrtime()
+
+Using BigDate::fromHrtime() you can convert hrtime timestamps to BigDate.
+The conversion should be 1 to 1 (BigDate uses hrtime internally), but the
+internal reference will be recalculated every time the clock jumps (e.g on
+hibernation or when the administrator adjusts the time). This can lead to
+fromHrtime interpreting timestamps vastly different before and after the jump.
+
+# For benchmarking/measurement overhead
+
+BigDate can be used for benchmarking and is better at it than Date and worse at it than hrtime.
+
+Measuring the actual overhead proofed difficult, because results where vastly different
+depending on how often hrtime was called.
+
+         | Worst | Cold  |  Hot  | Best
+-------- | ----- | ----- | ----- | -----
+Hrtime   |  10µs | 20µs  | 1.5µs |  80ns
+BigDate  | 500µs | 80µs  |   4µs | 250ns
+
+Worst: First few invocations, bad luck
+Cold: Typical first few invocations.
+Hot: After tens to hundreds of invocations
+Best: After millions of invocations
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| Converts | <code>Date</code> \| <code>BigDate</code> | a Date to a BigDate or copies a BigDate |
+| Construct | <code>String</code> | a BigDate from a string (like date, but supports arbitrary   precision in the ISO 8601 String decimal places) |
+| Construct | <code>Number</code> \| <code>Big</code> \| <code>Bigint</code> | a BigDate from the epoch value (unix time/number of   milliseconds elapsed sinc 1970-01-01). Decimal places are honored and can be used to   supply an epoch value of arbitrary precision. |
+| ...Can | <code>\*</code> | be used to construct a BigDate from components (year, month, day, hours,   minutes, seconds, milliseconds with decimal places) |
+
 <a name="BunyanStreamInterface"></a>
 
 ## BunyanStreamInterface
@@ -734,8 +836,10 @@ error handler that will log any errors using the rootLogger.
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
 | opts | <code>Object</code> |  | – Optional, named parameters |
-| [opts.level] | <code>string</code> | <code>&quot;&#x27;silly&#x27;&quot;</code> | The minimum log level to sent to loggly |
+| [opts.level] | <code>string</code> | <code>&quot;&#x27;silly&#x27;&quot;</code> | The minimum log level to sent to the logger |
+| [opts.logger] | [<code>Logger</code>](#Logger) | <code>rootLogger</code> | The helix logger to use |
 | [opts.filter] | <code>function</code> | <code>identity</code> | Will be given every log message to perform   arbitrary transformations; must return either another valid message object or undefined   (in which case the message will be dropped). |
+| [opts.defaultFields] | <code>object</code> |  | Additional log fields to add to every log message. |
 
 **Example**  
 ```
@@ -812,58 +916,6 @@ cover most use cases.
 | --- | --- | --- |
 | ...msg | <code>\*</code> | The message to write |
 
-<a name="LogdnaLogger"></a>
-
-## LogdnaLogger
-Sends log messages to the logdna logging service.
-
-Log messages are sent immediately.
-
-**Kind**: global class  
-**Implements**: [<code>Logger</code>](#Logger)  
-
-* [LogdnaLogger](#LogdnaLogger)
-    * [new LogdnaLogger(apikey, app, file, opts)](#new_LogdnaLogger_new)
-    * [.apikey](#LogdnaLogger+apikey) : [<code>Secret</code>](#Secret)
-    * [.app](#LogdnaLogger+app) : <code>string</code>
-    * [.host](#LogdnaLogger+host) : <code>string</code>
-    * [.apiurl](#LogdnaLogger+apiurl) : <code>string</code>
-
-<a name="new_LogdnaLogger_new"></a>
-
-### new LogdnaLogger(apikey, app, file, opts)
-
-| Param | Type | Description |
-| --- | --- | --- |
-| apikey | <code>string</code> \| [<code>Secret</code>](#Secret) | – Your logdna api key |
-| app | <code>string</code> | – Name of the app under which the log messages should be categorized |
-| file | <code>string</code> | – Name of the file(/subsystem) under which the    log messages should be categorized |
-| opts | <code>Object</code> | - `host`: Default is the system hostname; The hostname under which to categorize the messages   - `apiurl`: Default `https://logs.logdna.com`; The url under which the logdna api is hosted. |
-
-<a name="LogdnaLogger+apikey"></a>
-
-### logdnaLogger.apikey : [<code>Secret</code>](#Secret)
-Name of the app under which the log messages should be categorized
-
-**Kind**: instance property of [<code>LogdnaLogger</code>](#LogdnaLogger)  
-<a name="LogdnaLogger+app"></a>
-
-### logdnaLogger.app : <code>string</code>
-Name of the app under which the log messages should be categorized
-
-**Kind**: instance property of [<code>LogdnaLogger</code>](#LogdnaLogger)  
-<a name="LogdnaLogger+host"></a>
-
-### logdnaLogger.host : <code>string</code>
-The hostname under which to categorize the messages
-
-**Kind**: instance property of [<code>LogdnaLogger</code>](#LogdnaLogger)  
-<a name="LogdnaLogger+apiurl"></a>
-
-### logdnaLogger.apiurl : <code>string</code>
-The url under which the logdna api is hosted.
-
-**Kind**: instance property of [<code>LogdnaLogger</code>](#LogdnaLogger)  
 <a name="Secret"></a>
 
 ## Secret
@@ -1018,7 +1070,8 @@ easy to test with and contains no extra info.
 <a name="messageFormatTechnical"></a>
 
 ## messageFormatTechnical(fields) ⇒ [<code>MessageFormatter</code>](#MessageFormatter) \| <code>string</code>
-Message format that includes extra information; prefixes each messagej
+Message format that includes extra information; prefixes each message
+with the time stamp and the log level.
 
 This is used by FileLogger by default for instance because if you
 work with many log files you need that sort of info.
@@ -1067,6 +1120,22 @@ Really just an alias for `JSON.stringify(messageFormatJson(fields))`.
 | Param | Type |
 | --- | --- |
 | fields | [<code>Message</code>](#Message) | 
+
+<a name="deriveLogger"></a>
+
+## deriveLogger(logger, opts) ⇒ [<code>Logger</code>](#Logger)
+Helper function that creates a derived logger that is derived from a given logger, merging
+the given options. All the properties are shallow copied to the new logger With the exception of
+the `defaultFields`, where the `defaultFields` object itself is shallow-copied. Thus allowing to
+_extend_ the default fields.
+
+**Kind**: global function  
+**Returns**: [<code>Logger</code>](#Logger) - A new logger with updated options.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| logger | [<code>Logger</code>](#Logger) | the logger to derive from. |
+| opts | <code>object</code> | Options to merge with this logger |
 
 <a name="__handleLoggingExceptions"></a>
 
