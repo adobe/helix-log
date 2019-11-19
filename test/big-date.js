@@ -59,7 +59,12 @@ describe('BigDate', () => {
       d.getHours(), d.getMinutes(), d.getSeconds(),
       d.getMilliseconds());
 
-    ck('from sparse components', '2019-01-31T23:00:00.000000000Z', 1548975600000, 2019, 1);
+    it('from sparse components', () => {
+      ckEq(
+        new BigDate(2019, 1),
+        new BigDate(new Date(2019, 1)),
+      );
+    });
 
     const bd = new BigDate(bigMillis);
     ck('from Big components', bigISO, bigMillis,
