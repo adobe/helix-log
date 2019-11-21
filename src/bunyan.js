@@ -91,6 +91,7 @@ class BunyanStreamInterface extends InterfaceBase {
   }
 
   write(payload) {
+    /* istanbul ignore next */
     if (type(payload) !== Object) {
       throw new Error('BunyanStreamInterface requires a raw stream. Please use `"type": "raw"` when setting up the bunyan stream.');
     }

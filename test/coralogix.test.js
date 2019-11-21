@@ -40,9 +40,10 @@ class MockCoralogixServer {
       requestHandlerQ: [],
       requestQ: [],
       server: polka(),
+      stopped: true,
     });
 
-    post(me.server, '/logs', async (req, _) => {
+    post(me.server, '/logs', async (req, res) => {
       const dat = await readAll(req);
 
       if (empty(me.requestHandlerQ)) {
@@ -50,11 +51,17 @@ class MockCoralogixServer {
       } else {
         me.requestHandlerQ.pop()(dat);
       }
+
+      res.end('');
     });
 
-    me.port = await listenRandomPort(me.server);
-
     return me;
+  }
+
+  async listen() {
+    assert(this.stopped);
+    this.stopped = false;
+    this.port = await listenRandomPort(this.server);
   }
 
   nextReq() {
@@ -68,6 +75,7 @@ class MockCoralogixServer {
   async stop() {
     assert(!this.stopped);
     this.stopped = true;
+    this.port = undefined;
     stop(this.server);
     assert(empty(this.requestQ));
     assert(empty(this.requestHandlerQ));
@@ -83,7 +91,7 @@ it('CoralogixLogger', async () => {
     const subsystem = 'unittesting';
 
     const logger = new CoralogixLogger(apikey, app, subsystem, {
-      apiurl: `http://localhost:${server.port}/`,
+      apiurl: 'https://coralogix.invalid/',
     });
 
     const t0 = new Date().getTime();
@@ -91,6 +99,11 @@ it('CoralogixLogger', async () => {
       message: ['Hello ', 42, ' World ', { bar: 23 }],
       fnord: 42,
     }));
+
+    // Start the server now to prove that CoralogixLogger can deal with
+    // intermittent outages
+    await server.listen();
+    logger.apiurl = `http://localhost:${server.port}/`;
 
     const req = await server.nextReq();
 

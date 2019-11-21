@@ -847,10 +847,13 @@ class SimpleInterface extends /* private */ InterfaceBase {
   logFields(...msg) { this._logImpl('info', ...msg); }
   sillyFields(...msg) { this._logImpl('silly', ...msg); }
   traceFields(...msg) { this._logImpl('trace', ...msg); }
+  /* istanbul ignore next */
   debugFields(...msg) { this._logImpl('debug', ...msg); }
   verboseFields(...msg) { this._logImpl('verbose', ...msg); }
   infoFields(...msg) { this._logImpl('info', ...msg); }
+  /* istanbul ignore next */
   warnFields(...msg) { this._logImpl('warn', ...msg); }
+  /* istanbul ignore next */
   errorFields(...msg) { this._logImpl('error', ...msg); }
   fatalFields(...msg) { this._logImpl('fatal', ...msg); }
 
@@ -875,13 +878,16 @@ class SimpleInterface extends /* private */ InterfaceBase {
    * @param {...*} msg The message to write
    */
   log(...msg) { this._logImpl('info', ...msg, {}); }
+  /* istanbul ignore next */
   silly(...msg) { this._logImpl('silly', ...msg, {}); }
+  /* istanbul ignore next */
   trace(...msg) { this._logImpl('trace', ...msg, {}); }
   debug(...msg) { this._logImpl('debug', ...msg, {}); }
   verbose(...msg) { this._logImpl('verbose', ...msg, {}); }
   info(...msg) { this._logImpl('info', ...msg, {}); }
   warn(...msg) { this._logImpl('warn', ...msg, {}); }
   error(...msg) { this._logImpl('error', ...msg, {}); }
+  /* istanbul ignore next */
   fatal(...msg) { this._logImpl('fatal', ...msg, {}); }
 }
 

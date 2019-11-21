@@ -104,7 +104,20 @@ class CoralogixLogger extends FormattedLoggerBase {
     });
   }
 
-  _logImpl(payload, fields) {
+  async _logImpl(payload, fields) {
+    for (const t of [5, 10, 15]) {
+      try {
+        return await this._sendRequest(payload, fields);
+      } catch (e) {
+        await new Promise((res) => setTimeout(res, t));
+      }
+    }
+
+    /* istanbul ignore next */
+    return this._sendRequest(payload, fields);
+  }
+
+  async _sendRequest(payload, fields) {
     return phin({
       url: path.join(this.apiurl, '/logs'),
       method: 'POST',
