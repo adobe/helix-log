@@ -1,3 +1,10 @@
+# [4.1.0](https://github.com/adobe/helix-log/compare/v4.0.0...v4.1.0) (2019-11-22)
+
+
+### Features
+
+* Make CoralogixLogger resilient against short network outages ([9de97b2](https://github.com/adobe/helix-log/commit/9de97b2f5ec4445fb4db584915fa9b545f1cb79d)), closes [#60](https://github.com/adobe/helix-log/issues/60)
+
 # [4.0.0](https://github.com/adobe/helix-log/compare/v3.1.0...v4.0.0) (2019-11-08)
 
 
