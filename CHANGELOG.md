@@ -1,3 +1,10 @@
+# [4.2.0](https://github.com/adobe/helix-log/compare/v4.1.0...v4.2.0) (2019-12-04)
+
+
+### Features
+
+* **log:** add InterfaceBase.child(opts) to simplify derived loggers ([#67](https://github.com/adobe/helix-log/issues/67)) ([8498427](https://github.com/adobe/helix-log/commit/849842718e7a8dc5c6845320aa070a715d8c7c88))
+
 # [4.1.0](https://github.com/adobe/helix-log/compare/v4.0.0...v4.1.0) (2019-11-22)
 
 
