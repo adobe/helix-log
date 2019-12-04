@@ -1,3 +1,10 @@
+# [4.3.0](https://github.com/adobe/helix-log/compare/v4.2.0...v4.3.0) (2019-12-04)
+
+
+### Features
+
+* Winston Transport Interface ([8741d04](https://github.com/adobe/helix-log/commit/8741d048057edebd4fd066d15c94aaf3d9229fb9))
+
 # [4.2.0](https://github.com/adobe/helix-log/compare/v4.1.0...v4.2.0) (2019-12-04)
 
 
