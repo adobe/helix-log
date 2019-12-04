@@ -22,6 +22,7 @@ module.exports = {
   ...require('./serialize-json'),
   ...require('./coralogix'),
   ...require('./bunyan'),
+  ...require('./winston'),
   ...require('./secret'),
 };
 
