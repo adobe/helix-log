@@ -332,6 +332,22 @@ const messageFormatJson = ({ message, ...fields }) => jsonifyForLog({
 const messageFormatJsonString = (fields) => JSON.stringify(messageFormatJson(fields));
 
 /**
+ * Helper function that creates a derived logger that is derived from a given logger, merging
+ * the given options. All the properties are shallow copied to the new logger With the exception of
+ * the `defaultFields`, where the `defaultFields` object itself is shallow-copied. Thus allowing to
+ * _extend_ the default fields.
+ *
+ * @param {Logger} logger the logger to derive from.
+ * @param {object} opts Options to merge with this logger
+ * @returns {Logger} A new logger with updated options.
+ */
+const deriveLogger = (logger, opts) => {
+  const { defaultFields: optFields = {}, ...rest } = opts;
+  const defaultFields = { ...logger.defaultFields, ...optFields };
+  return new logger.constructor({ ...logger, defaultFields, ...rest });
+};
+
+/**
  * Helper to wrap any block of code and handle it's async & sync exceptions.
  *
  * This will catch any exceptions/promise rejections and log them using the rootLogger.
@@ -392,6 +408,10 @@ const __handleLoggingExceptions = (fields, logger, code) => {
  * that can be used to transform messages arbitrarily. This option should default to
  * the `identity()` function from ferrum. If the filter returns `undefined`
  * the message MUST be discarded.
+ *
+ * Loggers SHOULD provide a named constructor option 'defaultFields'; if they do support the
+ * property they MUST perform a shallow merge/setdefault into the message AFTER applying the
+ * filters.
  *
  * If loggers send messages to some external resource not supporting the Message
  * format, they SHOULD also provide an option 'formatter' and associated field
@@ -463,8 +483,10 @@ class LoggerBase {
    * @member {Function} filter
    */
 
-  constructor({ level = 'silly', filter = identity, ...unknown } = {}) {
-    assign(this, { level, filter });
+  constructor({
+    level = 'silly', defaultFields = {}, filter = identity, ...unknown
+  } = {}) {
+    assign(this, { level, filter, defaultFields });
     if (!empty(unknown)) {
       throw new Error(`Unknown named options given to ${typename(type(this))}: ${tryInspect(unknown)}`);
     }
@@ -475,10 +497,11 @@ class LoggerBase {
     __handleLoggingExceptions(fields_, this, async () => {
       const fields = this.filter(fields_);
       if (fields !== undefined && numericLogLevel(fields.level) <= numericLogLevel(this.level)) {
+        const mergedFields = { ...this.defaultFields, ...fields };
         if (formatter === undefined) { // LoggerBase impl
-          return this._logImpl(fields);
+          return this._logImpl(mergedFields);
         } else { // FormattedLoggerBase impl
-          return this._logImpl(this.formatter(fields), fields);
+          return this._logImpl(this.formatter(mergedFields), fields);
         }
       }
     });
@@ -719,6 +742,10 @@ class MemLogger extends FormattedLoggerBase {
  * the `identity()` function from ferrum. If the filter returns `undefined`
  * the message MUST be discarded.
  *
+ * LoggingInterfaces SHOULD provide a named constructor option 'defaultFields'; if they do support
+ * the property they MUST perform a shallow merge/setdefault into the message AFTER applying the
+ * filters.
+ *
  * @interface LoggingInterface
  */
 
@@ -747,16 +774,20 @@ class MemLogger extends FormattedLoggerBase {
  *
  * @class
  * @param {Object} opts – Optional, named parameters
- * @param {string} [opts.level='silly'] The minimum log level to sent to loggly
+ * @param {string} [opts.level='silly'] The minimum log level to sent to the logger
+ * @param {Logger} [opts.logger = rootLogger] The helix logger to use
  * @param {Function} [opts.filter=identity] Will be given every log message to perform
  *   arbitrary transformations; must return either another valid message object or undefined
  *   (in which case the message will be dropped).
+ * @param {object} [opts.defaultFields] Additional log fields to add to every log message.
  */
 class InterfaceBase {
   constructor({
-    logger = rootLogger, level = 'silly', filter = identity, ...unknown
+    logger = rootLogger, level = 'silly', filter = identity, defaultFields = {}, ...unknown
   } = {}) {
-    assign(this, { logger, level, filter });
+    assign(this, {
+      logger, level, filter, defaultFields,
+    });
     if (!empty(unknown)) {
       throw new Error(`Unknown named options given to ${typename(type(this))}: ${tryInspect(unknown)}`);
     }
@@ -766,7 +797,7 @@ class InterfaceBase {
     __handleLoggingExceptions(fields_, this.logger, async () => {
       const fields = this.filter(makeLogMessage(fields_));
       if (fields !== undefined && numericLogLevel(fields.level) <= numericLogLevel(this.level)) {
-        await this.logger.log(fields);
+        await this.logger.log({ ...this.defaultFields, ...fields });
       }
     });
   }
@@ -1010,6 +1041,7 @@ module.exports = {
   messageFormatJson,
   messageFormatJsonString,
   makeLogMessage,
+  deriveLogger,
   __handleLoggingExceptions,
   LoggerBase,
   FormattedLoggerBase,

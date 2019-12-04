@@ -33,7 +33,7 @@ const {
   FileLogger, MemLogger, MultiLogger, messageFormatSimple,
   messageFormatTechnical, messageFormatConsole, messageFormatJson,
   silly, log, messageFormatJsonStatic, SimpleInterface, makeLogMessage,
-  assertLogs, BigDate,
+  assertLogs, BigDate, deriveLogger,
 } = require('../src');
 const { ckEq, ckThrows } = require('./util');
 
@@ -337,6 +337,19 @@ const testLogger = (T, hasFormatter, args, opts, recordLogs) => {
     ]);
   });
 
+  it('Logs with default fields', () => {
+    ckJsonLogs(() => {
+      try {
+        logger.defaultFields = { borg: 33 };
+        iff.log('We are');
+      } finally {
+        logger.defaultFields = {};
+      }
+    }, [
+      { level: 'info', message: 'We are', borg: 33 },
+    ]);
+  });
+
   it('Drops messages because of filter', () => {
     ckJsonLogs(() => {
       try {
@@ -541,6 +554,53 @@ describe('InterfaceBase & SimpleInterface', () => {
       { level: 'warn', message: 'Hello World' },
       { level: 'silly', message: 'Foo', blarg: 42 },
       { level: 'fatal', message: '' },
+    ]);
+  });
+
+  it('Logs with default fields', () => {
+    logger.buf = [];
+    const sl = new SimpleInterface({ logger, defaultFields: { foo: 42, my: { data: 'abcd' } } });
+    sl.log();
+    sl.warn('Hello World');
+    sl.sillyFields('Foo', { foo: 44, blarg: 42 });
+    sl.fatalFields({ my: { status: 'ok' } });
+    ckEq(logger.buf, [
+      {
+        foo: 42, level: 'info', message: '', my: { data: 'abcd' },
+      },
+      {
+        foo: 42, level: 'warn', message: 'Hello World', my: { data: 'abcd' },
+      },
+      {
+        blarg: 42, foo: 44, level: 'silly', message: 'Foo', my: { data: 'abcd' },
+      },
+      {
+        foo: 42, level: 'fatal', message: '', my: { status: 'ok' },
+      },
+    ]);
+  });
+
+  it('Creates derived logger', () => {
+    logger.buf = [];
+    const sl = new SimpleInterface({ logger, defaultFields: { foo: 42, bar: 'abc' } });
+    const cl = deriveLogger(sl, { defaultFields: { bar: 'xyz', my: { data: 'abcd' } } });
+    cl.log();
+    cl.warn('Hello World');
+    cl.sillyFields('Foo', { foo: 44, blarg: 42 });
+    cl.fatalFields({ my: { status: 'ok' } });
+    ckEq(logger.buf, [
+      {
+        bar: 'xyz', foo: 42, level: 'info', message: '', my: { data: 'abcd' },
+      },
+      {
+        bar: 'xyz', foo: 42, level: 'warn', message: 'Hello World', my: { data: 'abcd' },
+      },
+      {
+        bar: 'xyz', blarg: 42, foo: 44, level: 'silly', message: 'Foo', my: { data: 'abcd' },
+      },
+      {
+        bar: 'xyz', foo: 42, level: 'fatal', message: '', my: { status: 'ok' },
+      },
     ]);
   });
 
