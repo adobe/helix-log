@@ -53,6 +53,9 @@ const _logLevelMapping = {
 /**
  * Sends log messages to the coralogix logging service.
  *
+ * You can customize the host, application and subsystem per log
+ * message by specifying the appropriate fields.
+ *
  * @class
  * @implements Logger
  * @param {string|Secret} apikey – Your coralogix api key
@@ -118,6 +121,11 @@ class CoralogixLogger extends FormattedLoggerBase {
   }
 
   async _sendRequest(payload, fields) {
+    const {
+      application = this.app,
+      subsystem = this.subsystem,
+      host = this.host,
+    } = fields;
     return phin({
       url: path.join(this.apiurl, '/logs'),
       method: 'POST',
@@ -126,9 +134,9 @@ class CoralogixLogger extends FormattedLoggerBase {
       },
       data: {
         privateKey: this.apikey.secret,
-        applicationName: this.app,
-        subsystemName: this.subsystem,
-        computerName: this.host,
+        applicationName: application,
+        subsystemName: subsystem,
+        computerName: host,
         logEntries: [{
           timestamp: Number(BigDate.preciseTime(fields.timestamp)),
           text: payload,

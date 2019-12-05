@@ -115,8 +115,8 @@ it('CoralogixLogger', async () => {
     delete req.logEntries[0].timestamp;
     delete text.timestamp;
 
-    assert((t1 - t0) < 10); // 10 ms window to send
-    assert((t2 - t0) < 10);
+    assert((t1 - t0) < 12); // 10 ms window to send
+    assert((t2 - t0) < 12);
     ckEq(req, {
       privateKey: apikey,
       applicationName: app,
@@ -130,6 +130,36 @@ it('CoralogixLogger', async () => {
       level: 'info',
       message: 'Hello 42 World { bar: 23 }',
       fnord: 42,
+    });
+
+    logger.log(makeLogMessage({
+      message: 'foo',
+      host: 'bar',
+      application: 'baz',
+      subsystem: 'bang',
+    }));
+
+    const req2 = await server.nextReq();
+    const text2 = JSON.parse(req2.logEntries[0].text);
+    delete req2.logEntries[0].text;
+    delete req2.logEntries[0].timestamp;
+    delete text2.timestamp;
+
+    ckEq(req2, {
+      privateKey: apikey,
+      computerName: 'bar',
+      applicationName: 'baz',
+      subsystemName: 'bang',
+      logEntries: [{
+        severity: 3,
+      }],
+    });
+    ckEq(text2, {
+      message: 'foo',
+      level: 'info',
+      host: 'bar',
+      application: 'baz',
+      subsystem: 'bang',
     });
   } finally {
     await server.stop();

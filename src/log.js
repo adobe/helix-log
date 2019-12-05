@@ -372,6 +372,8 @@ const __handleLoggingExceptions = (fields, logger, code) => {
         // are logged before the errors are logged)
         await new Promise((res) => setImmediate(res));
         error.fields(errorMsg, {
+          application: 'infrastructure',
+          subsystem: 'helix-log-error-handling',
           exception: e,
           logger,
         });
