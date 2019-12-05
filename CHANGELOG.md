@@ -1,3 +1,10 @@
+# [4.4.0](https://github.com/adobe/helix-log/compare/v4.3.0...v4.4.0) (2019-12-05)
+
+
+### Features
+
+* Provide own application/subsystem for logging errors ([201f187](https://github.com/adobe/helix-log/commit/201f187bf9418fb00db6582b3372d0b51a9f23c4))
+
 # [4.3.0](https://github.com/adobe/helix-log/compare/v4.2.0...v4.3.0) (2019-12-04)
 
 
