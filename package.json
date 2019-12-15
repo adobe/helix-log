@@ -40,7 +40,7 @@
     "@semantic-release/github": "5.5.5",
     "ajv": "6.10.2",
     "bunyan": "1.8.12",
-    "winston": "^3.2.1",
+    "winston": "3.2.1",
     "codecov": "3.6.1",
     "eslint": "6.7.2",
     "eslint-plugin-header": "3.0.0",
