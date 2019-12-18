@@ -1,3 +1,10 @@
+## [4.4.1](https://github.com/adobe/helix-log/compare/v4.4.0...v4.4.1) (2019-12-18)
+
+
+### Bug Fixes
+
+* **deps:** remove snyk as we use tidelift now ([#82](https://github.com/adobe/helix-log/issues/82)) ([3f96ec9](https://github.com/adobe/helix-log/commit/3f96ec9260c871642657ccd2b76d0521d1b4e011))
+
 # [4.4.0](https://github.com/adobe/helix-log/compare/v4.3.0...v4.4.0) (2019-12-05)
 
 
