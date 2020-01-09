@@ -1,3 +1,10 @@
+## [4.4.2](https://github.com/adobe/helix-log/compare/v4.4.1...v4.4.2) (2020-01-09)
+
+
+### Bug Fixes
+
+* **log:** ensure that filter can operate on default fields ([#86](https://github.com/adobe/helix-log/issues/86)) ([fe5a2b8](https://github.com/adobe/helix-log/commit/fe5a2b8a6aa9fde077244e9f8570588732b9b3c3)), closes [#85](https://github.com/adobe/helix-log/issues/85)
+
 ## [4.4.1](https://github.com/adobe/helix-log/compare/v4.4.0...v4.4.1) (2019-12-18)
 
 
