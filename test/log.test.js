@@ -580,6 +580,22 @@ describe('InterfaceBase & SimpleInterface', () => {
     ]);
   });
 
+  it('can filter default fields', () => {
+    logger.buf = [];
+    const sl = new SimpleInterface({
+      logger,
+      defaultFields: { foo: 42 },
+      filter: (f) => (f.foo === 42 ? undefined : f),
+    });
+    sl.info('Hello World');
+    sl.infoFields('Hello, Earth', { foo: 44 });
+    ckEq(logger.buf, [
+      {
+        foo: 44, level: 'info', message: 'Hello, Earth',
+      },
+    ]);
+  });
+
   it('Creates derived logger', () => {
     logger.buf = [];
     const sl = new SimpleInterface({ logger, defaultFields: { foo: 42, bar: 'abc' } });

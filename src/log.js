@@ -797,9 +797,9 @@ class InterfaceBase {
 
   _logImpl(fields_) {
     __handleLoggingExceptions(fields_, this.logger, async () => {
-      const fields = this.filter(makeLogMessage(fields_));
+      const fields = this.filter({ ...this.defaultFields, ...makeLogMessage(fields_) });
       if (fields !== undefined && numericLogLevel(fields.level) <= numericLogLevel(this.level)) {
-        await this.logger.log({ ...this.defaultFields, ...fields });
+        await this.logger.log(fields);
       }
     });
   }
