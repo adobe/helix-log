@@ -14,7 +14,8 @@ const { assign } = Object;
 const { hostname } = require('os');
 const path = require('path');
 const phin = require('phin');
-const { messageFormatJsonString, FormattedLoggerBase } = require('./log');
+const { messageFormatJsonString } = require('./utils.js');
+const FormattedLoggerBase = require('./FormattedLoggerBase.js');
 const { BigDate } = require('./big-date');
 const { Secret } = require('./secret');
 

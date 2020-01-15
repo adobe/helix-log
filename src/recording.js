@@ -11,7 +11,9 @@
  */
 
 const { dict, assertEquals } = require('ferrum');
-const { rootLogger, MemLogger, messageFormatJson } = require('./log');
+const { rootLogger } = require('./rootLogger.js');
+const { messageFormatJson } = require('./utils.js');
+const MemLogger = require('./MemLogger.js');
 
 /**
  * Message format used for comparing logs in tests.
