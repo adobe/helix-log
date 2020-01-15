@@ -18,12 +18,23 @@ const pkgJson = require('../package.json');
 module.exports = {
   ...require('./big-date'),
   ...require('./recording'),
-  ...require('./log'),
   ...require('./serialize-json'),
   ...require('./coralogix'),
   ...require('./bunyan'),
   ...require('./winston'),
   ...require('./secret'),
+  ...require('./messageFormats'),
+  ...require('./utils'),
+  ...require('./rootLogger'),
+  ...require('./globalLogger'),
+  InterfaceBase: require('./InterfaceBase'),
+  SimpleInterface: require('./SimpleInterface'),
+  LoggerBase: require('./LoggerBase.js'),
+  FormattedLoggerBase: require('./FormattedLoggerBase.js'),
+  ConsoleLogger: require('./ConsoleLogger.js'),
+  FileLogger: require('./FileLogger.js'),
+  MemLogger: require('./MemLogger.js'),
+  MultiLogger: require('./MultiLogger.js'),
 };
 
 // Make this repo a singleton.

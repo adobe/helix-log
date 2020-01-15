@@ -11,7 +11,7 @@
  */
 
 const { type } = require('ferrum');
-const { InterfaceBase } = require('./log');
+const InterfaceBase = require('./InterfaceBase.js');
 
 /**
  * Remove the default fields emitted by buyan.

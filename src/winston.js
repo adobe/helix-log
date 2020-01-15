@@ -14,11 +14,11 @@ const { assign } = Object;
 const { identity } = require('ferrum');
 const WinstonTransport = require('winston-transport');
 const { LEVEL, MESSAGE, SPLAT } = require('triple-beam');
+const { rootLogger } = require('./rootLogger.js');
 const {
-  rootLogger,
   __handleLoggingExceptions,
   makeLogMessage,
-} = require('./log');
+} = require('./utils.js');
 
 /**
  * Winston transport that forwards any winston log messages to

@@ -21,23 +21,23 @@ it('singleton expule', () => {
   const key = 'helix-log-a8b81455-7074-4953-a769-82754b0eb756';
   const exp = require('../src/index');
   const mod = require.cache[require.resolve('../src/index')];
-  const expLog = require('../src/log');
+  const expLog = require('../src/ConsoleLogger');
   assert.strictEqual(exp, global[key].module.exports);
-  assert(exp.ConsoleLogger === expLog.ConsoleLogger);
+  assert(exp.ConsoleLogger === expLog);
 
 
   // Delete from cache; should return same expule despite deletion
   const logged = exp.recordLogs(() => {
     delete require.cache[require.resolve('../src/index')];
-    delete require.cache[require.resolve('../src/log')];
+    delete require.cache[require.resolve('../src/ConsoleLogger')];
     const exp2 = require('../src/index');
     assert.strictEqual(exp, exp2);
     const mod2 = require.cache[require.resolve('../src/index')];
     assert(mod !== mod2);
-    const expLog2 = require('../src/log');
+    const expLog2 = require('../src/ConsoleLogger');
     assert(expLog !== expLog2);
     assert(exp.ConsoleLogger === exp2.ConsoleLogger);
-    assert(exp2.ConsoleLogger !== expLog2.ConsoleLogger);
+    assert(exp2.ConsoleLogger !== expLog2);
   });
   delete logged[0].timestamp;
 

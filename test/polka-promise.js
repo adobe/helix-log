@@ -15,7 +15,7 @@
 const { round, random } = Math;
 const http = require('http');
 const { join } = require('ferrum');
-const { error } = require('../src/log');
+const { error } = require('../src/index');
 
 /**
  * Promisived polka::post()
