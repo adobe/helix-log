@@ -11,11 +11,9 @@
  */
 
 const { assign } = Object;
-const { hostname } = require('os');
-const path = require('path');
-const phin = require('phin');
+const Coralogix = require('coralogix-logger');
+const { LoggerManager: CoralogixLoggerManager } = require('coralogix-logger/dist/logger.manager');
 const { messageFormatJsonString, FormattedLoggerBase } = require('./log');
-const { BigDate } = require('./big-date');
 const { Secret } = require('./secret');
 
 const _logLevelMapping = {
@@ -92,58 +90,32 @@ class CoralogixLogger extends FormattedLoggerBase {
   /* istanbul ignore next */
   constructor(apikey, app, subsystem, opts = {}) {
     const {
-      host = hostname(),
-      apiurl = 'https://api.coralogix.com/api/v1/',
+      /* istanbul ignore next */
       formatter = messageFormatJsonString,
       ...rest
     } = opts;
     super({ formatter, ...rest });
     assign(this, {
+      _loggerManager: new CoralogixLoggerManager(),
       apikey: new Secret(apikey),
-      apiurl,
       app,
       subsystem,
-      host,
+    });
+
+    this._loggerManager.config = new Coralogix.LoggerConfig({
+      privateKey: apikey,
+      applicationName: app,
+      subsystemName: subsystem,
     });
   }
 
+  /* istanbul ignore next */
   async _logImpl(payload, fields) {
-    for (const t of [5, 10, 15]) {
-      try {
-        return await this._sendRequest(payload, fields);
-      } catch (e) {
-        await new Promise((res) => setTimeout(res, t));
-      }
-    }
-
     /* istanbul ignore next */
-    return this._sendRequest(payload, fields);
-  }
-
-  async _sendRequest(payload, fields) {
-    const {
-      application = this.app,
-      subsystem = this.subsystem,
-      host = this.host,
-    } = fields;
-    return phin({
-      url: path.join(this.apiurl, '/logs'),
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: {
-        privateKey: this.apikey.secret,
-        applicationName: application,
-        subsystemName: subsystem,
-        computerName: host,
-        logEntries: [{
-          timestamp: Number(BigDate.preciseTime(fields.timestamp)),
-          text: payload,
-          severity: _logLevelMapping[fields.level],
-        }],
-      },
-    });
+    this._loggerManager.addLogline(new Coralogix.Log({
+      severity: _logLevelMapping[fields.level],
+      text: payload,
+    }));
   }
 }
 
