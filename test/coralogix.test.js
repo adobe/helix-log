@@ -15,6 +15,7 @@
 const { assign } = Object;
 const assert = require('assert');
 const { hostname } = require('os');
+const http = require('http');
 const polka = require('polka');
 const { type, typename, empty } = require('ferrum');
 const { CoralogixLogger, makeLogMessage } = require('../src');
@@ -104,6 +105,7 @@ it('CoralogixLogger', async () => {
     // intermittent outages
     await server.listen();
     logger.apiurl = `http://localhost:${server.port}/`;
+    logger._agent = http.globalAgent;
 
     const req = await server.nextReq();
 

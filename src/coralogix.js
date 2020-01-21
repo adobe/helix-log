@@ -14,6 +14,7 @@ const { assign } = Object;
 const { hostname } = require('os');
 const path = require('path');
 const phin = require('phin');
+const https = require('https');
 const { messageFormatJsonString, FormattedLoggerBase } = require('./log');
 const { BigDate } = require('./big-date');
 const { Secret } = require('./secret');
@@ -104,6 +105,11 @@ class CoralogixLogger extends FormattedLoggerBase {
       app,
       subsystem,
       host,
+      // use connection pool
+      _agent: new https.Agent({
+        keepAlive: true,
+        maxSockets: 32,
+      }),
     });
   }
 
@@ -131,6 +137,9 @@ class CoralogixLogger extends FormattedLoggerBase {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+      },
+      core: {
+        agent: this._agent,
       },
       data: {
         privateKey: this.apikey.secret,
