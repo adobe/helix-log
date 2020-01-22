@@ -1,3 +1,10 @@
+# [4.5.0](https://github.com/adobe/helix-log/compare/v4.4.2...v4.5.0) (2020-01-22)
+
+
+### Features
+
+* **coralogix:** use connection pool ([#93](https://github.com/adobe/helix-log/issues/93)) ([f8cb543](https://github.com/adobe/helix-log/commit/f8cb543ce17136566784a981d7cf576a6481b6cd))
+
 ## [4.4.2](https://github.com/adobe/helix-log/compare/v4.4.1...v4.4.2) (2020-01-09)
 
 
