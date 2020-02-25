@@ -1,3 +1,10 @@
+## [4.5.1](https://github.com/adobe/helix-log/compare/v4.5.0...v4.5.1) (2020-02-25)
+
+
+### Bug Fixes
+
+* **deps:** update dependency uuid to v7 ([#102](https://github.com/adobe/helix-log/issues/102)) ([d4c8aa7](https://github.com/adobe/helix-log/commit/d4c8aa7268e3e8652511d734dd91ce907e11bebb))
+
 # [4.5.0](https://github.com/adobe/helix-log/compare/v4.4.2...v4.5.0) (2020-01-22)
 
 
