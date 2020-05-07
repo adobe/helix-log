@@ -48,7 +48,7 @@
     "mocha-parallel-tests": "2.3.0",
     "nyc": "15.0.1",
     "semantic-release": "17.0.7",
-    "uuid": "^8.0.0"
+    "uuid": "8.0.0"
   },
   "renovate": {
     "extends": [
