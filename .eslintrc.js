@@ -13,16 +13,16 @@
 module.exports = {
   root: true,
   extends: '@adobe/helix',
-  'rules': {
+  rules: {
     'max-classes-per-file': 'off',
     'no-underscore-dangle': 'off',
-    'no-unused-vars': ["error", {
-      "varsIgnorePattern": "^_.*$",
-      "argsIgnorePattern": "^_.*$",
-      "caughtErrorsIgnorePattern": "^_.*$"
+    'no-unused-vars': ['error', {
+      varsIgnorePattern: '^_.*$',
+      argsIgnorePattern: '^_.*$',
+      caughtErrorsIgnorePattern: '^_.*$',
     }],
     'class-methods-use-this': 'off',
     'no-await-in-loop': 'off',
     'no-constant-condition': 'off',
-  }
+  },
 };
