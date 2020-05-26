@@ -33,22 +33,22 @@
     "@adobe/eslint-config-helix": "1.1.0",
     "@semantic-release/changelog": "5.0.1",
     "@semantic-release/git": "9.0.0",
-    "@semantic-release/github": "7.0.6",
+    "@semantic-release/github": "7.0.7",
     "ajv": "6.12.2",
     "bunyan": "1.8.12",
     "winston": "3.2.1",
     "codecov": "3.7.0",
-    "eslint": "7.0.0",
+    "eslint": "7.1.0",
     "eslint-plugin-header": "3.0.0",
     "eslint-plugin-import": "2.20.2",
     "jsdoc-to-markdown": "5.0.3",
     "junit-report-builder": "2.0.0",
-    "mocha": "7.1.2",
+    "mocha": "7.2.0",
     "mocha-junit-reporter": "1.23.3",
     "mocha-parallel-tests": "2.3.0",
     "nyc": "15.0.1",
-    "semantic-release": "17.0.7",
-    "uuid": "8.0.0"
+    "semantic-release": "17.0.8",
+    "uuid": "8.1.0"
   },
   "renovate": {
     "extends": [
