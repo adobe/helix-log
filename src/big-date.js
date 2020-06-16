@@ -260,7 +260,6 @@ class BigDate extends Date {
     }
     // FAST PATH END
 
-
     super(0);
     if (arguments.length > 1) {
       // eslint-disable-next-line prefer-rest-params

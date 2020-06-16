@@ -924,7 +924,6 @@ class SimpleInterface extends /* private */ InterfaceBase {
   fatal(...msg) { this._logImpl('fatal', ...msg, {}); }
 }
 
-
 /**
  * The logger all other loggers attach to.
  *

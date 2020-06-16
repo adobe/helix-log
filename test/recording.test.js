@@ -89,7 +89,6 @@ it('recordAsyncLogs, assertAsyncLogs', async () => {
   // Default logger restored
   assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
 
-
   // Exception safety
   let ex;
   try {
