@@ -25,7 +25,6 @@ it('singleton expule', () => {
   assert.strictEqual(exp, global[key].module.exports);
   assert(exp.ConsoleLogger === expLog.ConsoleLogger);
 
-
   // Delete from cache; should return same expule despite deletion
   const logged = exp.recordLogs(() => {
     delete require.cache[require.resolve('../src/index')];
