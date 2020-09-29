@@ -1,3 +1,10 @@
+## [4.5.2](https://github.com/adobe/helix-log/compare/v4.5.1...v4.5.2) (2020-09-29)
+
+
+### Bug Fixes
+
+* **deps:** update external major ([#146](https://github.com/adobe/helix-log/issues/146)) ([1bed044](https://github.com/adobe/helix-log/commit/1bed044ec1a13df65318de8ae4b88080e7c5730b))
+
 ## [4.5.1](https://github.com/adobe/helix-log/compare/v4.5.0...v4.5.1) (2020-02-25)
 
 
