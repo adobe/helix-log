@@ -163,6 +163,15 @@ it('CoralogixLogger', async () => {
       application: 'baz',
       subsystem: 'bang',
     });
+
+    logger.log({
+      level: 'info',
+      timestamp: 'boo',
+      message: ['foo'],
+      host: 'bar',
+      application: 'baz',
+      subsystem: 'bang',
+    });
   } finally {
     await server.stop();
   }

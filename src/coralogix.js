@@ -147,12 +147,20 @@ class CoralogixLogger extends FormattedLoggerBase {
         subsystemName: subsystem,
         computerName: host,
         logEntries: [{
-          timestamp: Number(BigDate.preciseTime(fields.timestamp)),
+          timestamp: CoralogixLogger._preciseTime(fields.timestamp),
           text: payload,
           severity: _logLevelMapping[fields.level],
         }],
       },
     });
+  }
+
+  static _preciseTime(ts) {
+    try {
+      return Number(BigDate.preciseTime(ts));
+    } catch (e) {
+      return new Date().getTime();
+    }
   }
 }
 
