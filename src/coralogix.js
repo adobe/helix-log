@@ -132,6 +132,24 @@ class CoralogixLogger extends FormattedLoggerBase {
       subsystem = this.subsystem,
       host = this.host,
     } = fields;
+
+    let timestamp = Number(new BigDate());
+    let text = payload;
+
+    try {
+      timestamp = Number(BigDate.preciseTime(fields.timestamp));
+    } catch (e) {
+      const msg = `Error: Invalid timestamp passed: ${fields.timestamp}`;
+      try {
+        const json = JSON.parse(text);
+        json.infrastructure = msg;
+        text = JSON.stringify(json);
+      } catch (e2) {
+        /* Not JSON so pass it as text */
+        text = `${text}\n${msg}`;
+      }
+    }
+
     return phin({
       url: path.join(this.apiurl, '/logs'),
       method: 'POST',
@@ -147,8 +165,8 @@ class CoralogixLogger extends FormattedLoggerBase {
         subsystemName: subsystem,
         computerName: host,
         logEntries: [{
-          timestamp: Number(BigDate.preciseTime(fields.timestamp)),
-          text: payload,
+          timestamp,
+          text,
           severity: _logLevelMapping[fields.level],
         }],
       },

@@ -163,6 +163,28 @@ it('CoralogixLogger', async () => {
       application: 'baz',
       subsystem: 'bang',
     });
+
+    logger.log({
+      level: 'info',
+      timestamp: 'boo',
+      message: ['foo'],
+      host: 'bar',
+      application: 'baz',
+      subsystem: 'bang',
+    });
+
+    const req3 = await server.nextReq();
+    const text3 = JSON.parse(req3.logEntries[0].text);
+    delete text3.timestamp;
+
+    ckEq(text3, {
+      message: 'foo',
+      level: 'info',
+      host: 'bar',
+      application: 'baz',
+      subsystem: 'bang',
+      infrastructure: 'Error: Invalid timestamp passed: boo',
+    });
   } finally {
     await server.stop();
   }
