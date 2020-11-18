@@ -133,14 +133,21 @@ class CoralogixLogger extends FormattedLoggerBase {
       host = this.host,
     } = fields;
 
-    let timestamp;
+    let timestamp = Number(new BigDate());
     let text = payload;
 
     try {
       timestamp = Number(BigDate.preciseTime(fields.timestamp));
     } catch (e) {
-      text = `${text}\nTimestamp passed invalid: ${fields.timestamp}`;
-      timestamp = Number(new BigDate());
+      const msg = `Timestamp passed invalid: ${fields.timestamp}`;
+      try {
+        const json = JSON.parse(text);
+        json.infrastructure = msg;
+        text = JSON.stringify(json);
+      } catch (e2) {
+        /* Not JSON so pass it as text */
+        text = `${text}\n${msg}`;
+      }
     }
 
     return phin({
