@@ -1,3 +1,10 @@
+## [4.5.3](https://github.com/adobe/helix-log/compare/v4.5.2...v4.5.3) (2020-11-18)
+
+
+### Bug Fixes
+
+* catch errors thrown by BigDate parsing ([#156](https://github.com/adobe/helix-log/issues/156)) ([7ae4e8b](https://github.com/adobe/helix-log/commit/7ae4e8b78ca30ba3e23b826ee98dfdcf6e9d96dd))
+
 ## [4.5.2](https://github.com/adobe/helix-log/compare/v4.5.1...v4.5.2) (2020-09-29)
 
 
