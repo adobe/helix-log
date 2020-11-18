@@ -172,6 +172,19 @@ it('CoralogixLogger', async () => {
       application: 'baz',
       subsystem: 'bang',
     });
+
+    const req3 = await server.nextReq();
+    const text3 = JSON.parse(req3.logEntries[0].text);
+    delete text3.timestamp;
+
+    ckEq(text3, {
+      message: 'foo',
+      level: 'info',
+      host: 'bar',
+      application: 'baz',
+      subsystem: 'bang',
+      infrastructure: 'Timestamp passed invalid: boo',
+    });
   } finally {
     await server.stop();
   }
