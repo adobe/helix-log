@@ -183,7 +183,7 @@ it('CoralogixLogger', async () => {
       host: 'bar',
       application: 'baz',
       subsystem: 'bang',
-      infrastructure: 'Timestamp passed invalid: boo',
+      infrastructure: 'Error: Invalid timestamp passed: boo',
     });
   } finally {
     await server.stop();

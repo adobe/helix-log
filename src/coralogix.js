@@ -139,7 +139,7 @@ class CoralogixLogger extends FormattedLoggerBase {
     try {
       timestamp = Number(BigDate.preciseTime(fields.timestamp));
     } catch (e) {
-      const msg = `Timestamp passed invalid: ${fields.timestamp}`;
+      const msg = `Error: Invalid timestamp passed: ${fields.timestamp}`;
       try {
         const json = JSON.parse(text);
         json.infrastructure = msg;
