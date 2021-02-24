@@ -6,7 +6,7 @@ Logging framework used within the helix project.
 
 [![codecov](https://img.shields.io/codecov/c/github/adobe/helix-log.svg)](https://codecov.io/gh/adobe/helix-log)
 [![CircleCI](https://img.shields.io/circleci/project/github/adobe/helix-log.svg)](https://circleci.com/gh/adobe/helix-log)
-[![GitHub license](https://img.shields.io/github/license/adobe/helix-log.svg)](https://github.com/adobe/helix-log/blob/master/LICENSE.txt)
+[![GitHub license](https://img.shields.io/github/license/adobe/helix-log.svg)](https://github.com/adobe/helix-log/blob/main/LICENSE.txt)
 [![GitHub issues](https://img.shields.io/github/issues/adobe/helix-log.svg)](https://github.com/adobe/helix-log/issues)
 [![LGTM Code Quality Grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/adobe/helix-log.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/adobe/helix-log)
 

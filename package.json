@@ -36,7 +36,6 @@
     "@semantic-release/github": "7.2.0",
     "ajv": "7.1.1",
     "bunyan": "1.8.15",
-    "winston": "3.3.3",
     "codecov": "3.8.1",
     "eslint": "7.20.0",
     "eslint-plugin-header": "3.1.1",
@@ -48,7 +47,8 @@
     "mocha-parallel-tests": "2.3.0",
     "nyc": "15.1.0",
     "semantic-release": "17.3.9",
-    "uuid": "8.3.2"
+    "uuid": "8.3.2",
+    "winston": "3.3.3"
   },
   "renovate": {
     "extends": [
