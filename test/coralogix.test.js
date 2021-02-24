@@ -83,14 +83,21 @@ class MockCoralogixServer {
   }
 }
 
-it('CoralogixLogger', async () => {
-  const server = await MockCoralogixServer.create();
+describe('Coralogix Logger', () => {
+  const apikey = 'fnord42';
+  const app = 'helix';
+  const subsystem = 'unittesting';
 
-  try {
-    const apikey = 'fnord42';
-    const app = 'helix';
-    const subsystem = 'unittesting';
+  let server;
+  beforeEach(async () => {
+    server = await MockCoralogixServer.create();
+  });
 
+  afterEach(async () => {
+    await server.stop();
+  });
+
+  it('can handle outages', async () => {
     const logger = new CoralogixLogger(apikey, app, subsystem, {
       apiurl: 'https://coralogix.invalid/',
     });
@@ -133,6 +140,14 @@ it('CoralogixLogger', async () => {
       message: 'Hello 42 World { bar: 23 }',
       fnord: 42,
     });
+  });
+
+  it('can make requests immediately', async () => {
+    await server.listen();
+    const logger = new CoralogixLogger(apikey, app, subsystem, {
+      apiurl: `http://localhost:${server.port}/`,
+    });
+    logger._agent = http.globalAgent;
 
     logger.log(makeLogMessage({
       message: 'foo',
@@ -185,7 +200,73 @@ it('CoralogixLogger', async () => {
       subsystem: 'bang',
       infrastructure: 'Error: Invalid timestamp passed: boo',
     });
-  } finally {
-    await server.stop();
-  }
+  });
+
+  it('clears pending requests on success', async () => {
+    await server.listen();
+    const logger = new CoralogixLogger(apikey, app, subsystem, {
+      apiurl: `http://localhost:${server.port}/`,
+    });
+    logger._agent = http.globalAgent;
+
+    ckEq(logger._tasks.length, 0);
+    logger.log(makeLogMessage({
+      message: 'foo',
+      host: 'bar',
+      application: 'baz',
+      subsystem: 'bang',
+    }));
+    ckEq(logger._tasks.length, 1);
+    await server.nextReq();
+    // wait a tick
+    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
+    ckEq(logger._tasks.length, 0);
+  });
+
+  it('waits for pending requests on flush', async () => {
+    await server.listen();
+    const logger = new CoralogixLogger(apikey, app, subsystem, {
+      apiurl: `http://localhost:${server.port}/`,
+    });
+    logger._agent = http.globalAgent;
+
+    ckEq(logger._tasks.length, 0);
+    logger.log(makeLogMessage({
+      message: 'foo',
+      host: 'bar',
+      application: 'baz',
+      subsystem: 'bang',
+    }));
+    ckEq(logger._tasks.length, 1);
+    const slowServer = new Promise((resolve) => {
+      setTimeout(() => {
+        server.nextReq().then(resolve);
+      });
+    }, 100);
+
+    await logger.flush();
+    await slowServer;
+    ckEq(logger._tasks.length, 0);
+  });
+
+  it('clears pending requests on error', async () => {
+    await server.listen();
+    const logger = new CoralogixLogger(apikey, app, subsystem, {
+      apiurl: `https://localhost:${server.port}/invalid`,
+    });
+    logger._agent = http.globalAgent;
+
+    ckEq(logger._tasks.length, 0);
+    logger.log(makeLogMessage({
+      message: 'foo',
+      host: 'bar',
+      application: 'baz',
+      subsystem: 'bang',
+    }));
+    ckEq(logger._tasks.length, 1);
+    // wait a bit
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    ckEq(logger._tasks.length, 0);
+  });
 });
