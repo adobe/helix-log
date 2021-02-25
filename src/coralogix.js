@@ -110,10 +110,33 @@ class CoralogixLogger extends FormattedLoggerBase {
         keepAlive: true,
         maxSockets: 32,
       }),
+      _tasks: [],
     });
   }
 
-  async _logImpl(payload, fields) {
+  async flush() {
+    // eslint-disable-next-line no-console
+    console.log(`coralogix: flushing ${this._tasks.length} pending requests...`);
+    await Promise.all(this._tasks);
+    // eslint-disable-next-line no-console
+    console.log(`coralogix: flushing ${this._tasks.length} pending requests done.`);
+    this._tasks = [];
+  }
+
+  async _logImpl(...args) {
+    const task = this._sendRequestsWithRetry(...args);
+    task.finally(() => {
+      const idx = this._tasks.indexOf(task);
+      /* istanbul ignore next */
+      if (idx >= 0) {
+        this._tasks.splice(idx, 1);
+      }
+    });
+    this._tasks.push(task);
+    return task;
+  }
+
+  async _sendRequestsWithRetry(payload, fields) {
     for (const t of [5, 10, 15]) {
       try {
         return await this._sendRequest(payload, fields);
@@ -146,6 +169,7 @@ class CoralogixLogger extends FormattedLoggerBase {
         text = JSON.stringify(json);
       } catch (e2) {
         /* Not JSON so pass it as text */
+        /* istanbul ignore next */
         text = `${text}\n${msg}`;
       }
     }

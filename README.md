@@ -53,6 +53,8 @@ to helix log.</p>
 </dd>
 <dt><a href="#CoralogixLogger">CoralogixLogger</a></dt>
 <dd><p>Sends log messages to the coralogix logging service.</p>
+<p>You can customize the host, application and subsystem per log
+message by specifying the appropriate fields.</p>
 </dd>
 <dt><a href="#LoggerBase">LoggerBase</a></dt>
 <dd><p>Can be used as a base class/helper for implementing loggers.</p>
@@ -113,10 +115,25 @@ specify both a message and custom fields to the underlying logger.</p>
 secret has to be explicitly extracted before using it.</p>
 <pre><code>const mySecret = new Secret(42); // Create a secret
 mySecret.value; // =&gt; 42; extract the value
-mySecret.value = 64; // assign a new value</code></pre><p>The secret can only be accessed through the .secret property
+mySecret.value = 64; // assign a new value</code></pre>
+<p>The secret can only be accessed through the .secret property
 in order to make sure that the access is not accidental;
 the secret property cannot be iterated over and the secret will
 not be leaked when converted to json or when printed.</p>
+</dd>
+<dt><a href="#WinstonTransportInterface">WinstonTransportInterface</a></dt>
+<dd><p>Winston transport that forwards any winston log messages to
+the specified helix-log logger.</p>
+<pre><code>const winston = require(&#39;winston&#39;);
+const { WinstonTransportInterface } = require(&#39;helix-log&#39;);
+
+const myWinsonLogger = W.createLogger({
+  transports: [new WinstonTransportInterface()]
+});
+
+// Will log &#39;Hello World&#39; to the rootLogger with the fields:
+// {category: &#39;testing&#39;}.
+myWinsonLogger.info(&#39;Hello World&#39;, category: &#39;testing&#39;);</code></pre>
 </dd>
 </dl>
 
@@ -426,6 +443,11 @@ Helix-log provides some built-in formatters e.g. for plain text, json and
 for consoles supporting ANSI escape sequences.
 
 **Kind**: global interface  
+
+* [Logger](#Logger)
+    * [.log(fields)](#Logger+log)
+    * [.flush()](#Logger+flush)
+
 <a name="Logger+log"></a>
 
 ### logger.log(fields)
@@ -445,6 +467,19 @@ still catch any errors and handle them appropriately.
 | --- | --- |
 | fields | [<code>Message</code>](#Message) | 
 
+<a name="Logger+flush"></a>
+
+### logger.flush()
+Flush the internal buffer.
+
+Implementations of this SHOULD try to flush the underlying log sink if possible.
+The returned promise SHOULD only fulfill if the flushing was done (best effort).
+
+Note that implementations SHOULD use best effort to avoid buffering or the need for flushing.
+However, there might be cases where this is not possible, for example when sending log messages
+over the network.
+
+**Kind**: instance method of [<code>Logger</code>](#Logger)  
 <a name="LoggingInterface"></a>
 
 ## LoggingInterface
@@ -584,6 +619,9 @@ to helix log.
 ## CoralogixLogger
 Sends log messages to the coralogix logging service.
 
+You can customize the host, application and subsystem per log
+message by specifying the appropriate fields.
+
 **Kind**: global class  
 **Implements**: [<code>Logger</code>](#Logger)  
 
@@ -593,6 +631,7 @@ Sends log messages to the coralogix logging service.
     * [.app](#CoralogixLogger+app) : <code>string</code>
     * [.subsystem](#CoralogixLogger+subsystem) : <code>string</code>
     * [.host](#CoralogixLogger+host) : <code>string</code>
+    * [.flush()](#CoralogixLogger+flush)
 
 <a name="new_CoralogixLogger_new"></a>
 
@@ -630,6 +669,20 @@ Name of the subsystem under which the log messages should be categorized
 The hostname under which to categorize the messages
 
 **Kind**: instance property of [<code>CoralogixLogger</code>](#CoralogixLogger)  
+<a name="CoralogixLogger+flush"></a>
+
+### coralogixLogger.flush()
+Flush the internal buffer.
+
+Implementations of this SHOULD try to flush the underlying log sink if possible.
+The returned promise SHOULD only fulfill if the flushing was done (best effort).
+
+Note that implementations SHOULD use best effort to avoid buffering or the need for flushing.
+However, there might be cases where this is not possible, for example when sending log messages
+over the network.
+
+**Kind**: instance method of [<code>CoralogixLogger</code>](#CoralogixLogger)  
+**Implements**: [<code>flush</code>](#Logger+flush)  
 <a name="LoggerBase"></a>
 
 ## LoggerBase
@@ -763,6 +816,20 @@ order to add, remove or alter logger.
 **Kind**: global class  
 **Implements**: [<code>Logger</code>](#Logger)  
 **Parameter**: <code>Sequence&lt;Loggers&gt;</code> loggers – The loggers to forward to.  
+<a name="MultiLogger+flush"></a>
+
+### multiLogger.flush()
+Flush the internal buffer.
+
+Implementations of this SHOULD try to flush the underlying log sink if possible.
+The returned promise SHOULD only fulfill if the flushing was done (best effort).
+
+Note that implementations SHOULD use best effort to avoid buffering or the need for flushing.
+However, there might be cases where this is not possible, for example when sending log messages
+over the network.
+
+**Kind**: instance method of [<code>MultiLogger</code>](#MultiLogger)  
+**Implements**: [<code>flush</code>](#Logger+flush)  
 <a name="FileLogger"></a>
 
 ## FileLogger
@@ -860,46 +927,6 @@ specify both a message and custom fields to the underlying logger.
 
 **Kind**: global class  
 **Implements**: [<code>LoggingInterface</code>](#LoggingInterface)  
-
-* [SimpleInterface](#SimpleInterface)
-    * [.fatalFields(...msg)](#SimpleInterface+fatalFields)
-    * [.fatal(...msg)](#SimpleInterface+fatal)
-
-<a name="SimpleInterface+fatalFields"></a>
-
-### simpleInterface.fatalFields(...msg)
-The *Fields methods are used to log both a message
-custom fields to the underlying logger.
-
-The fields object must be present (and error will be thrown
-if the last element is not an object) and any fields specified
-take precedence over default values.
-
-**Kind**: instance method of [<code>SimpleInterface</code>](#SimpleInterface)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| ...msg | <code>\*</code> | The message to write |
-
-**Example**  
-```
-const { SimpleInterface } = require('helix-log');
-
-const logger = new SimpleInterface();
-
-// Will throw an error because the fields object is missing.
-logger.verboseFields("Hello");
-
-// Will log a message 'Fooled!' with level error and the time
-// stamp set to the y2k (although it would be more customary
-// use logFields to indicate that the log level will be set through
-// the fields).
-sillyFields("Hello World", {
-  level: 'error',
-  timestamp: new Date("2000-01-01"),
-  message: ["Fooled!"]
-});
-```
 <a name="SimpleInterface+fatal"></a>
 
 ### simpleInterface.fatal(...msg)
@@ -936,6 +963,36 @@ the secret property cannot be iterated over and the secret will
 not be leaked when converted to json or when printed.
 
 **Kind**: global class  
+<a name="WinstonTransportInterface"></a>
+
+## WinstonTransportInterface
+Winston transport that forwards any winston log messages to
+the specified helix-log logger.
+
+```
+const winston = require('winston');
+const { WinstonTransportInterface } = require('helix-log');
+
+const myWinsonLogger = W.createLogger({
+  transports: [new WinstonTransportInterface()]
+});
+
+// Will log 'Hello World' to the rootLogger with the fields:
+// {category: 'testing'}.
+myWinsonLogger.info('Hello World', category: 'testing');
+```
+
+**Kind**: global class  
+**Implements**: <code>WinstonTransport</code>, [<code>LoggingInterface</code>](#LoggingInterface)  
+<a name="new_WinstonTransportInterface_new"></a>
+
+### new WinstonTransportInterface(opts)
+
+| Param | Type | Description |
+| --- | --- | --- |
+| opts | <code>Object</code> | – Options as specified by WinstonTransport   AND by LoggingInterface; both sets of options are supported |
+| opts.level | <code>String</code> | – This is the level as specified by WinstonTransport.   If your winston instance uses custom log levels not supported by   helix-log you can use the filter to map winston log levels to helix   log ones. |
+
 <a name="rootLogger"></a>
 
 ## rootLogger

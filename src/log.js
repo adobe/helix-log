@@ -444,6 +444,21 @@ const __handleLoggingExceptions = (fields, logger, code) => {
  */
 
 /**
+ * Flush the internal buffer.
+ *
+ * Implementations of this SHOULD try to flush the underlying log sink if possible.
+ * The returned promise SHOULD only fulfill if the flushing was done (best effort).
+ *
+ * Note that implementations SHOULD use best effort to avoid buffering or the need for flushing.
+ * However, there might be cases where this is not possible, for example when sending log messages
+ * over the network.
+ *
+ * @method
+ * @memberOf Logger#
+ * @name flush
+ */
+
+/**
  * Can be used as a base class/helper for implementing loggers.
  *
  * This will first apply the filter, drop the message if the level is
@@ -512,6 +527,9 @@ class LoggerBase {
   log(fields) {
     return this.__logWithFormatter(fields, undefined);
   }
+
+  // eslint-disable-next-line no-empty-function
+  async flush() { }
 }
 
 /**
@@ -628,6 +646,10 @@ class MultiLogger extends LoggerBase {
     this.loggers = dict(loggers);
   }
 
+  async flush() {
+    return Promise.all(map(this.loggers, ([_name, sub]) => sub.flush()));
+  }
+
   _logImpl(fields) {
     each(this.loggers, ([_name, sub]) => {
       __handleLoggingExceptions(fields, sub, async () => {
@@ -674,6 +696,7 @@ class FileLogger extends FormattedLoggerBase {
     writeSync(this.fd, `${str}\n`);
   }
 
+  /* istanbul ignore next */
   close() {
     closeSync(this.fd);
   }
@@ -795,6 +818,10 @@ class InterfaceBase {
     }
   }
 
+  async flush() {
+    return this.logger.flush();
+  }
+
   _logImpl(fields_) {
     __handleLoggingExceptions(fields_, this.logger, async () => {
       const fields = this.filter({ ...this.defaultFields, ...makeLogMessage(fields_) });
@@ -877,8 +904,11 @@ class SimpleInterface extends /* private */ InterfaceBase {
    * @alias fatalFields
    * @param {...*} msg The message to write
    */
+  /* istanbul ignore next */
   logFields(...msg) { this._logImpl('info', ...msg); }
+  /* istanbul ignore next */
   sillyFields(...msg) { this._logImpl('silly', ...msg); }
+  /* istanbul ignore next */
   traceFields(...msg) { this._logImpl('trace', ...msg); }
   /* istanbul ignore next */
   debugFields(...msg) { this._logImpl('debug', ...msg); }

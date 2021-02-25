@@ -480,6 +480,27 @@ describe('MultiLogger', async () => {
     ckEq(mem1.buf, mem2.buf);
   });
 
+  it('flushes sub loggers', async () => {
+    const flushes = [];
+    const log0 = {
+      log() {},
+      async flush() {
+        flushes.push('log0');
+      },
+    };
+    const log1 = {
+      log() {},
+      async flush() {
+        flushes.push('log1');
+      },
+    };
+    const logger = new MultiLogger({ log0, log1 });
+    const iff = new SimpleInterface({ logger });
+    iff.info('hello, world');
+    await iff.flush();
+    assert.deepStrictEqual(flushes, ['log0', 'log1']);
+  });
+
   it('Shields exceptions in one logger from the other', async () => {
     const mem3 = new MemLogger({ formatter: messageFormatSimple });
     const logger = new MultiLogger({ mem3 });

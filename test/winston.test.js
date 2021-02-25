@@ -14,31 +14,57 @@
 
 const winston = require('winston');
 const { list, map } = require('ferrum');
-const { WinstonTransportInterface, MemLogger, messageFormatJson } = require('../src/index');
+const {
+  WinstonTransportInterface, MemLogger, messageFormatJson, rootLogger,
+} = require('../src/index');
 const { ckEq } = require('./util');
 
-it('WinstonTransportInterface', async () => {
-  const hlx = new MemLogger({ formatter: messageFormatJson });
-  const win = winston.createLogger({
-    transports: [new WinstonTransportInterface({
-      logger: hlx,
-    })],
+describe('WinstonTransportInterface', () => {
+  it('uses the default options', () => {
+    const tsp = new WinstonTransportInterface();
+    ckEq(tsp.logger, rootLogger);
   });
 
-  win.error('Hello World');
-  win.warn('Horrible!', { field: 'green' });
+  it('logs to the logger', async () => {
+    const hlx = new MemLogger({ formatter: messageFormatJson });
+    const win = winston.createLogger({
+      transports: [new WinstonTransportInterface({
+        logger: hlx,
+      })],
+    });
 
-  await new Promise((res) => setTimeout(res, 10));
+    win.error('Hello World');
+    win.warn('Horrible!', { field: 'green' });
 
-  ckEq(list(map(hlx.buf, ({ timestamp: _, ...fields }) => fields)), [
-    {
-      level: 'error',
-      message: 'Hello World',
-    },
-    {
-      field: 'green',
-      level: 'warn',
-      message: 'Horrible!',
-    },
-  ]);
+    await new Promise((res) => setTimeout(res, 10));
+
+    ckEq(list(map(hlx.buf, ({ timestamp: _, ...fields }) => fields)), [
+      {
+        level: 'error',
+        message: 'Hello World',
+      },
+      {
+        field: 'green',
+        level: 'warn',
+        message: 'Horrible!',
+      },
+    ]);
+  });
+
+  it('can filter', async () => {
+    const hlx = new MemLogger({ formatter: messageFormatJson });
+    const win = winston.createLogger({
+      transports: [new WinstonTransportInterface({
+        logger: hlx,
+        filter: () => undefined,
+      })],
+    });
+
+    win.error('Hello World');
+    win.warn('Horrible!', { field: 'green' });
+
+    await new Promise((res) => setTimeout(res, 10));
+
+    ckEq(list(map(hlx.buf, ({ timestamp: _, ...fields }) => fields)), []);
+  });
 });
