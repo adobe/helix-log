@@ -1,3 +1,18 @@
+# [5.0.0](https://github.com/adobe/helix-log/compare/v4.5.3...v5.0.0) (2021-02-25)
+
+
+### Features
+
+* **log:** add flush() ([af72e3a](https://github.com/adobe/helix-log/commit/af72e3a785f51bc4b2e2c558e47a151f06cb488f))
+
+
+### BREAKING CHANGES
+
+* **log:** New method: Logger.flush() added
+
+Loggers now need to implement a 'flush()' method or extend from
+LoggerBase which already provides a stub.
+
 ## [4.5.3](https://github.com/adobe/helix-log/compare/v4.5.2...v4.5.3) (2020-11-18)
 
 
