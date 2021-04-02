@@ -269,4 +269,24 @@ describe('Coralogix Logger', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
     ckEq(logger._tasks.length, 0);
   });
+  it('does not propagate error in flush', async () => {
+    await server.listen();
+    const logger = new CoralogixLogger(apikey, app, subsystem, {
+      apiurl: `https://localhost:${server.port}/invalid`,
+    });
+    logger._agent = http.globalAgent;
+
+    ckEq(logger._tasks.length, 0);
+    logger.log(makeLogMessage({
+      message: 'foo',
+      host: 'bar',
+      application: 'baz',
+      subsystem: 'bang',
+    }));
+    ckEq(logger._tasks.length, 1);
+    logger._tasks[0].finally(() => {
+      throw new Error('I don\'t feel like flushing right now');
+    });
+    await assert.doesNotReject(async () => logger.flush());
+  });
 });
