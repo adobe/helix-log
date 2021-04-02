@@ -1,3 +1,10 @@
+## [5.0.1](https://github.com/adobe/helix-log/compare/v5.0.0...v5.0.1) (2021-04-02)
+
+
+### Bug Fixes
+
+* **coralogix:** never throw an exception when flushing fails, just log an error to console ([7b58313](https://github.com/adobe/helix-log/commit/7b583137cbd77de3788677fbdae0dda67f8a6d83)), closes [#181](https://github.com/adobe/helix-log/issues/181)
+
 # [5.0.0](https://github.com/adobe/helix-log/compare/v4.5.3...v5.0.0) (2021-02-25)
 
 
