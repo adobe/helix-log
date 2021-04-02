@@ -1,3 +1,10 @@
+## [5.0.2](https://github.com/adobe/helix-log/compare/v5.0.1...v5.0.2) (2021-04-02)
+
+
+### Bug Fixes
+
+* **deps:** npm audit fix ([2bb15b7](https://github.com/adobe/helix-log/commit/2bb15b79ddd8d29a09efd56d2b913e97acfce97c))
+
 ## [5.0.1](https://github.com/adobe/helix-log/compare/v5.0.0...v5.0.1) (2021-04-02)
 
 
