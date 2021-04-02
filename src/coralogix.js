@@ -117,7 +117,14 @@ class CoralogixLogger extends FormattedLoggerBase {
   async flush() {
     // eslint-disable-next-line no-console
     console.log(`coralogix: flushing ${this._tasks.length} pending requests...`);
-    await Promise.all(this._tasks);
+    try {
+      await Promise.all(this._tasks);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(`coralogix: flusing failed: ${e.message}`);
+      // done tasks are automatically removed, so keep the remaining (failed ones)
+      return;
+    }
     // eslint-disable-next-line no-console
     console.log(`coralogix: flushing ${this._tasks.length} pending requests done.`);
     this._tasks = [];
