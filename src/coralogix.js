@@ -129,14 +129,18 @@ class CoralogixLogger extends FormattedLoggerBase {
   }
 
   async _logImpl(...args) {
-    const task = this._sendRequestsWithRetry(...args);
-    task.finally(() => {
-      const idx = this._tasks.indexOf(task);
-      /* istanbul ignore next */
-      if (idx >= 0) {
-        this._tasks.splice(idx, 1);
-      }
-    });
+    const task = this._sendRequestsWithRetry(...args)
+      .catch((e) => {
+        // eslint-disable-next-line no-console
+        console.error('coralogix: error sending request', e);
+      })
+      .finally(() => {
+        const idx = this._tasks.indexOf(task);
+        /* istanbul ignore next */
+        if (idx >= 0) {
+          this._tasks.splice(idx, 1);
+        }
+      });
     this._tasks.push(task);
     return task;
   }
