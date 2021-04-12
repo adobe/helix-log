@@ -1,3 +1,10 @@
+## [5.0.3](https://github.com/adobe/helix-log/compare/v5.0.2...v5.0.3) (2021-04-12)
+
+
+### Bug Fixes
+
+* **coralogix:** fix promise rejection warning ([#185](https://github.com/adobe/helix-log/issues/185)) ([98cacff](https://github.com/adobe/helix-log/commit/98cacff1f89cf5f449ea7f6a41341f509087b9fa))
+
 ## [5.0.2](https://github.com/adobe/helix-log/compare/v5.0.1...v5.0.2) (2021-04-02)
 
 
