@@ -37,7 +37,7 @@
     "ajv": "8.5.0",
     "bunyan": "1.8.15",
     "codecov": "3.8.2",
-    "eslint": "7.27.0",
+    "eslint": "7.28.0",
     "eslint-plugin-header": "3.1.1",
     "eslint-plugin-import": "2.23.4",
     "jsdoc-to-markdown": "7.0.1",
