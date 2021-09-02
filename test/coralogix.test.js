@@ -42,9 +42,14 @@ class MockCoralogixServer {
       requestQ: [],
       server: polka(),
       stopped: true,
+      delay: 0,
     });
 
     post(me.server, '/logs', async (req, res) => {
+      if (me.delay) {
+        await new Promise((resolve) => setTimeout(resolve, me.delay));
+      }
+
       const dat = await readAll(req);
 
       if (empty(me.requestHandlerQ)) {
@@ -224,7 +229,32 @@ describe('Coralogix Logger', () => {
     ckEq(logger._tasks.length, 0);
   });
 
+  it('handles timeout', async () => {
+    server.delay = 500;
+    await server.listen();
+    const logger = new CoralogixLogger(apikey, app, subsystem, {
+      apiurl: `http://localhost:${server.port}/`,
+      timeout: 200,
+    });
+    logger._agent = http.globalAgent;
+
+    ckEq(logger._tasks.length, 0);
+    logger.log(makeLogMessage({
+      message: 'foo',
+      host: 'bar',
+      application: 'baz',
+      subsystem: 'bang',
+    }));
+    ckEq(logger._tasks.length, 1);
+    await server.nextReq();
+    // wait a tick
+    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
+    ckEq(logger._tasks.length, 0);
+  });
+
   it('waits for pending requests on flush', async () => {
+    server.delay = 500;
     await server.listen();
     const logger = new CoralogixLogger(apikey, app, subsystem, {
       apiurl: `http://localhost:${server.port}/`,
@@ -239,14 +269,8 @@ describe('Coralogix Logger', () => {
       subsystem: 'bang',
     }));
     ckEq(logger._tasks.length, 1);
-    const slowServer = new Promise((resolve) => {
-      setTimeout(() => {
-        server.nextReq().then(resolve);
-      });
-    }, 100);
-
     await logger.flush();
-    await slowServer;
+    await server.nextReq();
     ckEq(logger._tasks.length, 0);
   });
 
@@ -269,6 +293,7 @@ describe('Coralogix Logger', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
     ckEq(logger._tasks.length, 0);
   });
+
   it('does not propagate error in flush', async () => {
     await server.listen();
     const logger = new CoralogixLogger(apikey, app, subsystem, {
