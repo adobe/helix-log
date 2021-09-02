@@ -1,3 +1,10 @@
+## [5.0.4](https://github.com/adobe/helix-log/compare/v5.0.3...v5.0.4) (2021-09-02)
+
+
+### Bug Fixes
+
+* add timeout of 5s for sending logs to coralogix ([#221](https://github.com/adobe/helix-log/issues/221)) ([36b4ae2](https://github.com/adobe/helix-log/commit/36b4ae2a27b13a84124eeeb1c77ee113342d7ff8)), closes [#196](https://github.com/adobe/helix-log/issues/196)
+
 ## [5.0.3](https://github.com/adobe/helix-log/compare/v5.0.2...v5.0.3) (2021-04-12)
 
 
