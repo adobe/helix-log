@@ -90,12 +90,19 @@ class CoralogixLogger extends FormattedLoggerBase {
    * @member {string} host
    */
 
+  /**
+   * Request timeout for sending logs. defaults to 5000 milliseconds
+   * @memberOf CoralogixLogger#
+   * @member {number} timeout
+   */
+
   /* istanbul ignore next */
   constructor(apikey, app, subsystem, opts = {}) {
     const {
       host = hostname(),
       apiurl = 'https://api.coralogix.com/api/v1/',
       formatter = messageFormatJsonString,
+      timeout,
       ...rest
     } = opts;
     super({ formatter, ...rest });
@@ -105,6 +112,7 @@ class CoralogixLogger extends FormattedLoggerBase {
       app,
       subsystem,
       host,
+      _timeout: timeout || 5000,
       // use connection pool
       _agent: new https.Agent({
         keepAlive: true,
@@ -150,6 +158,9 @@ class CoralogixLogger extends FormattedLoggerBase {
       try {
         return await this._sendRequest(payload, fields);
       } catch (e) {
+        if (e.message === 'Timeout reached') {
+          break;
+        }
         await new Promise((res) => setTimeout(res, t));
       }
     }
@@ -192,6 +203,7 @@ class CoralogixLogger extends FormattedLoggerBase {
       core: {
         agent: this._agent,
       },
+      timeout: this._timeout,
       data: {
         privateKey: this.apikey.secret,
         applicationName: application,
