@@ -1,3 +1,10 @@
+## [5.0.5](https://github.com/adobe/helix-log/compare/v5.0.4...v5.0.5) (2021-09-20)
+
+
+### Bug Fixes
+
+* update ferrum et al ([a397c01](https://github.com/adobe/helix-log/commit/a397c01b4e44f457afdf1906b8adad97d756a7cd))
+
 ## [5.0.4](https://github.com/adobe/helix-log/compare/v5.0.3...v5.0.4) (2021-09-02)
 
 
