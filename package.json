@@ -22,7 +22,7 @@
   "homepage": "https://github.com/adobe/helix-log#readme",
   "dependencies": {
     "big.js": "^6.0.0",
-    "colorette": "^1.1.0",
+    "colorette": "^2.0.0",
     "ferrum": "^1.7.0",
     "phin": "^3.4.1",
     "polka": "^0.5.2",
@@ -33,7 +33,7 @@
     "@adobe/eslint-config-helix": "1.1.5",
     "@semantic-release/changelog": "5.0.1",
     "@semantic-release/git": "9.0.1",
-    "@semantic-release/github": "7.2.3",
+    "@semantic-release/github": "8.0.0",
     "ajv": "8.6.3",
     "bunyan": "1.8.15",
     "codecov": "3.8.3",
@@ -46,7 +46,7 @@
     "mocha-junit-reporter": "2.0.0",
     "mocha-parallel-tests": "2.3.0",
     "nyc": "15.1.0",
-    "semantic-release": "17.4.7",
+    "semantic-release": "18.0.0",
     "uuid": "8.3.2",
     "winston": "3.3.3"
   },
