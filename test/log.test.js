@@ -22,7 +22,6 @@ const { inspect } = require('util');
 const { v4: uuidgen } = require('uuid');
 const {
   black, bgRed, bgYellow, yellow, green, bgBlackBright, bgBlueBright,
-  options: coloretteOpts,
 } = require('colorette');
 const {
   join, pipe, map, identity, size, exec, type, list, last,
@@ -36,8 +35,6 @@ const {
   assertLogs, BigDate, deriveLogger,
 } = require('../src');
 const { ckEq, ckThrows } = require('./util');
-
-coloretteOpts.enabled = true;
 
 it('numericLogLevel', () => {
   assert.strictEqual(numericLogLevel('fatal'), 0);
