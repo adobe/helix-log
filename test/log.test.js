@@ -234,7 +234,6 @@ class StringStream extends stream.Writable {
 }
 
 const testLogger = (T, hasFormatter, args, opts, recordLogs) => {
-
   it('sets default options', () => {
     const a = new T(...args, opts);
     assert(type(a.filter) === Function);
