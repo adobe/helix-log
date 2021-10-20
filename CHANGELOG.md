@@ -1,3 +1,30 @@
+# [6.0.0](https://github.com/adobe/helix-log/compare/v5.0.5...v6.0.0) (2021-10-20)
+
+
+### Bug Fixes
+
+* remove global root logger and related methods ([cbc5135](https://github.com/adobe/helix-log/commit/cbc5135c494a679895f07882d40b5d3dedbf14f9))
+* remove winston support ([bf9053a](https://github.com/adobe/helix-log/commit/bf9053af8c6128473b17d3f7652d4630c4036ba2))
+
+
+### BREAKING CHANGES
+
+* the following constants and methods are no longer
+  exported:
+  - rootLogger
+  - fatal
+  - error
+  - info
+  - log
+  - warn
+  - verbose
+  - debug
+  - trace
+  - silly
+
+In order to quickly get a root logger, use `createDefaultLogger()`.
+* the winston transport is no longer supported
+
 ## [5.0.5](https://github.com/adobe/helix-log/compare/v5.0.4...v5.0.5) (2021-09-20)
 
 
