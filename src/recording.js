@@ -11,7 +11,7 @@
  */
 
 const { dict, assertEquals } = require('ferrum');
-const { rootLogger, MemLogger, messageFormatJson } = require('./log');
+const { MemLogger, messageFormatJson } = require('./log');
 
 /**
  * Message format used for comparing logs in tests.
@@ -57,21 +57,24 @@ const messageFormatJsonStatic = (fields) => {
  * ```
  *
  * @function
+ * @param {Logger} rootLogger root logger that is used for recording
  * @param {Object} opts – optional first parameter; options passed to MemLogger
  * @param {Function} fn - The logs that this code emits will be recorded.
  * @returns {string} The logs that where produced by the codee
  */
-const recordLogs = (opts, fn) => {
+const recordLogs = (rootLogger, opts, fn) => {
   if (opts instanceof Function) {
-    return recordLogs({}, opts);
+    return recordLogs(rootLogger, {}, opts);
   }
 
   const backup = rootLogger.loggers;
   const logger = new MemLogger(opts);
   try {
+    // eslint-disable-next-line no-param-reassign
     rootLogger.loggers = dict({ default: logger });
     fn();
   } finally {
+    // eslint-disable-next-line no-param-reassign
     rootLogger.loggers = backup;
   }
 
@@ -95,16 +98,17 @@ const recordLogs = (opts, fn) => {
  * ```
  *
  * @function
+ * @param {Logger} rootLogger root logger that is used for recording
  * @param {Object} opts – optional first parameter; options passed to MemLogger
  * @param {Function} fn - The logs that this code emits will be recorded.
  * @param {string} logs
  */
-const assertLogs = (opts, fn, logs) => {
+const assertLogs = (rootLogger, opts, fn, logs) => {
   if (opts instanceof Function) {
-    assertLogs({}, opts, fn);
+    assertLogs(rootLogger, {}, opts, fn);
   } else {
     assertEquals(
-      recordLogs({ formatter: messageFormatJsonStatic, ...opts }, fn),
+      recordLogs(rootLogger, { formatter: messageFormatJsonStatic, ...opts }, fn),
       logs,
     );
   }
@@ -117,21 +121,24 @@ const assertLogs = (opts, fn, logs) => {
  * may also emit log messages while this procedure is running
  *
  * @function
+ * @param {Logger} rootLogger root logger that is used for recording
  * @param {Object} opts – optional first parameter; options passed to MemLogger
  * @param {Function} fn - The logs that this code emits will be recorded.
  * @returns {string} The logs that where produced by the code
  */
-const recordAsyncLogs = async (opts, fn) => {
+const recordAsyncLogs = async (rootLogger, opts, fn) => {
   if (opts instanceof Function) {
-    return recordAsyncLogs({}, opts);
+    return recordAsyncLogs(rootLogger, {}, opts);
   }
 
   const backup = rootLogger.loggers;
   const logger = new MemLogger(opts);
   try {
+    // eslint-disable-next-line no-param-reassign
     rootLogger.loggers = dict({ default: logger });
     await fn();
   } finally {
+    // eslint-disable-next-line no-param-reassign
     rootLogger.loggers = backup;
   }
 
@@ -145,16 +152,17 @@ const recordAsyncLogs = async (opts, fn) => {
  * may also emit logs while this async procedure is running.
  *
  * @function
+ * @param {Logger} rootLogger root logger that is used for recording
  * @param {Object} opts – optional first parameter; options passed to MemLogger
  * @param {Function} fn - The logs that this code emits will be recorded.
  * @param {string} logs
  */
-const assertAsyncLogs = async (opts, fn, logs) => {
+const assertAsyncLogs = async (rootLogger, opts, fn, logs) => {
   if (opts instanceof Function) {
-    await assertAsyncLogs({}, opts, fn);
+    await assertAsyncLogs(rootLogger, {}, opts, fn);
   } else {
     assertEquals(
-      await recordAsyncLogs({ formatter: messageFormatJsonStatic, ...opts }, fn),
+      await recordAsyncLogs(rootLogger, { formatter: messageFormatJsonStatic, ...opts }, fn),
       logs,
     );
   }
