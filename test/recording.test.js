@@ -14,15 +14,18 @@
 
 const assert = require('assert');
 const {
-  assertAsyncLogs, assertLogs, recordLogs, recordAsyncLogs, info, warn,
-  verbose, error, rootLogger, ConsoleLogger, messageFormatSimple,
+  assertAsyncLogs, assertLogs, recordLogs, recordAsyncLogs,
+  ConsoleLogger, messageFormatSimple,
+  createDefaultLogger, SimpleInterface,
 } = require('../src');
 
 it('recordLogs, assertLogs', () => {
+  const rootLogger = createDefaultLogger();
+  const log = new SimpleInterface({ logger: rootLogger });
   // assertLogs: without opts, recordLogs: with opts
-  assertLogs(() => {
-    info('Hello World');
-    verbose.fields('Foo', { x: 42 });
+  assertLogs(rootLogger, () => {
+    log.info('Hello World');
+    log.verboseFields('Foo', { x: 42 });
   }, [
     { level: 'info', message: 'Hello World' },
     { level: 'verbose', message: 'Foo', x: 42 },
@@ -32,10 +35,10 @@ it('recordLogs, assertLogs', () => {
   assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
 
   // assertLogs: with opts, recordLogs: with opts
-  assertLogs({ level: 'warn', formatter: messageFormatSimple }, () => {
-    info('Hello World');
-    warn.fields('Foo', { foo: 42 });
-    error('Bar');
+  assertLogs(rootLogger, { level: 'warn', formatter: messageFormatSimple }, () => {
+    log.info('Hello World');
+    log.warnFields('Foo', { foo: 42 });
+    log.error('Bar');
   }, [
     '[WARN] Foo { foo: 42 }',
     '[ERROR] Bar',
@@ -58,12 +61,15 @@ it('recordLogs, assertLogs', () => {
 });
 
 it('recordAsyncLogs, assertAsyncLogs', async () => {
+  const rootLogger = createDefaultLogger();
+  const log = new SimpleInterface({ logger: rootLogger });
+
   // assertLogs: without opts, recordLogs: with opts
-  await assertAsyncLogs(async () => {
+  await assertAsyncLogs(rootLogger, async () => {
     await new Promise((res) => setImmediate(res));
-    info('Hello World');
+    log.info('Hello World');
     await new Promise((res) => setImmediate(res));
-    verbose.fields('Foo', { x: 42 });
+    log.verboseFields('Foo', { x: 42 });
     await new Promise((res) => setImmediate(res));
   }, [
     { level: 'info', message: 'Hello World' },
@@ -74,13 +80,13 @@ it('recordAsyncLogs, assertAsyncLogs', async () => {
   assert(rootLogger.loggers.get('default') instanceof ConsoleLogger);
 
   // assertLogs: with opts, recordLogs: with opts
-  await assertAsyncLogs({ level: 'warn', formatter: messageFormatSimple }, async () => {
+  await assertAsyncLogs(rootLogger, { level: 'warn', formatter: messageFormatSimple }, async () => {
     await new Promise((res) => setImmediate(res));
-    info('Hello World');
+    log.info('Hello World');
     await new Promise((res) => setImmediate(res));
-    warn.fields('Foo', { foo: 42 });
+    log.warnFields('Foo', { foo: 42 });
     await new Promise((res) => setImmediate(res));
-    error('Bar');
+    log.error('Bar');
   }, [
     '[WARN] Foo { foo: 42 }',
     '[ERROR] Bar',

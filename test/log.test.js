@@ -27,12 +27,13 @@ const {
   join, pipe, map, identity, size, exec, type, list, last,
 } = require('ferrum');
 const {
-  numericLogLevel, serializeMessage, ConsoleLogger, rootLogger,
-  recordAsyncLogs, tryInspect, warn, messageFormatJsonString,
+  numericLogLevel, serializeMessage, ConsoleLogger,
+  recordAsyncLogs, tryInspect, messageFormatJsonString,
   FileLogger, MemLogger, MultiLogger, messageFormatSimple,
   messageFormatTechnical, messageFormatConsole, messageFormatJson,
-  silly, log, messageFormatJsonStatic, SimpleInterface, makeLogMessage,
+  messageFormatJsonStatic, SimpleInterface, makeLogMessage,
   assertLogs, BigDate, deriveLogger,
+  createDefaultLogger,
 } = require('../src');
 const { ckEq, ckThrows } = require('./util');
 
@@ -55,8 +56,9 @@ Object.defineProperty(BrokenClassName, 'name', {
 });
 
 it('tryInspect', async () => {
-  const ck = (ref, what) => assert.strictEqual(tryInspect(what), ref);
-  const logs = await recordAsyncLogs({ formatter: messageFormatSimple }, async () => {
+  const logger = createDefaultLogger();
+  const ck = (ref, what) => assert.strictEqual(tryInspect(what, { logger }), ref);
+  const logs = await recordAsyncLogs(logger, { formatter: messageFormatSimple }, async () => {
     ck('undefined', undefined);
     ck('42', 42);
     ck('{ foo: 42 }', { foo: 42 });
@@ -84,7 +86,8 @@ it('tryInspect', async () => {
 });
 
 it('serializeMessage', () => {
-  const ck = (ref, msg) => assert.strictEqual(serializeMessage(msg), ref);
+  const logger = createDefaultLogger();
+  const ck = (ref, msg) => assert.strictEqual(serializeMessage(msg, { logger }), ref);
   ck('');
   ck('', []);
   ck('42', [42]);
@@ -98,7 +101,7 @@ it('serializeMessage', () => {
   ck('{ foo: Foo { bar: 42 } }', [{ foo: f }]);
 
   // Deals with invalid messages
-  assertLogs(() => {
+  assertLogs(logger, () => {
     ck('true', true);
     ck('null', null);
     ck('hello', 'hello');
@@ -230,23 +233,6 @@ class StringStream extends stream.Writable {
   }
 }
 
-const recordAsyncStderr = async (fn) => {
-  const ss = new StringStream();
-  const stderrBackup = console._stderr;
-  try {
-    console._stderr = ss;
-    await fn();
-  } finally {
-    console._stderr = stderrBackup;
-  }
-
-  const r = ss.extract().split('\n');
-  if (last(r) === '') {
-    r.pop();
-  }
-  return r;
-};
-
 const testLogger = (T, hasFormatter, args, opts, recordLogs) => {
   it('sets default options', () => {
     const a = new T(...args, opts);
@@ -277,6 +263,9 @@ const testLogger = (T, hasFormatter, args, opts, recordLogs) => {
   });
 
   const logger = new T(...args, opts);
+  const rootLogger = createDefaultLogger();
+  rootLogger.loggers.test = logger;
+
   const iff = new SimpleInterface({ logger });
 
   if (hasFormatter) {
@@ -376,7 +365,7 @@ const testLogger = (T, hasFormatter, args, opts, recordLogs) => {
   });
 
   it('Catches & debounces errors', async () => {
-    const reports = await recordAsyncLogs(async () => {
+    const reports = await recordAsyncLogs(rootLogger, async () => {
       try {
         logger.filter = 42; // Break the logger
 
@@ -407,10 +396,12 @@ const testLogger = (T, hasFormatter, args, opts, recordLogs) => {
       await new Promise((res) => setTimeout(res, 10));
     });
 
-    ckEq(size(reports), 1);
-    ckEq(reports[0].message, ['Encountered exception while logging!']);
-    assert(reports[0].exception instanceof Error);
-    ckEq(reports[0].logger, logger);
+    // this doesn't work anymore, since we don't use the global root logger anymore
+    // in the exception handling
+    ckEq(size(reports), 0);
+    // ckEq(reports[0].message, ['Encountered exception while logging!']);
+    // assert(reports[0].exception instanceof Error);
+    // ckEq(reports[0].logger, logger);
   });
 };
 
@@ -497,55 +488,9 @@ describe('MultiLogger', async () => {
     await iff.flush();
     assert.deepStrictEqual(flushes, ['log0', 'log1']);
   });
-
-  it('Shields exceptions in one logger from the other', async () => {
-    const mem3 = new MemLogger({ formatter: messageFormatSimple });
-    const logger = new MultiLogger({ mem3 });
-    const iff = new SimpleInterface({ logger });
-
-    const reports = await recordAsyncLogs(async () => {
-      try {
-        // Make sure the message will need to be debounced
-        rootLogger.loggers.set('393bfb2e-f197-42cf-8da3-eebde92bebde', logger);
-
-        // Trigger the exception
-        logger.loggers.set('bad', null);
-        iff.info('Hello World');
-
-        // Make sure logging to mem1 succeeded
-        ckEq(mem3.buf, ['[INFO] Hello World']);
-
-        // Give some time to print the error (potentially multiple times
-        // testing debouncing)
-        await new Promise((res) => setTimeout(res, 10));
-      } finally {
-        rootLogger.loggers.delete('393bfb2e-f197-42cf-8da3-eebde92bebde');
-        logger.loggers.delete('bad');
-      }
-
-      const errMsg = mem3.buf.pop();
-      assert(errMsg.startsWith('[ERROR] Encountered exception while logging'));
-
-      // Functionality should be fully restored
-      iff.debug('Ford Prefect');
-      ckEq(mem3.buf, ['[INFO] Hello World', '[DEBUG] Ford Prefect']);
-    });
-
-    ckEq(size(reports), 1);
-    ckEq(reports[0].message, ['Encountered exception while logging!']);
-    assert(reports[0].exception instanceof Error);
-    ckEq(reports[0].logger, null);
-  });
 });
 
 describe('InterfaceBase & SimpleInterface', () => {
-  it('Supports default options', () => {
-    const l = new SimpleInterface();
-    ckEq(l.logger, rootLogger);
-    ckEq(l.level, 'silly');
-    ckEq(l.filter, identity);
-  });
-
   it('Sets options', () => {
     const fn = () => undefined;
     const l = new SimpleInterface({ logger: null, level: 'error', filter: fn });
@@ -671,64 +616,6 @@ describe('InterfaceBase & SimpleInterface', () => {
     }
     ckEq(logger.buf, [
       { level: 'warn', message: 'Fnord' },
-    ]);
-  });
-
-  it('Shields exceptions', async () => {
-    await recordAsyncLogs(async () => {
-      try {
-        logger.buf = [];
-        iff.filter = null;
-        iff.warn('Hello World');
-
-        await new Promise((res) => setTimeout(res, 10));
-
-        iff.filter = identity;
-        iff.info('Foo');
-
-        ckEq(logger.buf, [
-          { level: 'info', message: 'Foo' },
-        ]);
-      } finally {
-        iff.filter = identity;
-      }
-    });
-  });
-});
-
-describe('global', () => {
-  it('logs', () => {
-    assertLogs(() => {
-      warn('Hello World');
-      silly('Borg');
-      log.fields({ message: ['XXX'], level: 'error', picard: 'grey' });
-    }, [
-      { level: 'warn', message: 'Hello World' },
-      { level: 'silly', message: 'Borg' },
-      { level: 'error', message: 'XXX', picard: 'grey' },
-    ]);
-  });
-
-  it('Shields global desparate exceptions', async () => {
-    const logged = await recordAsyncStderr(async () => {
-      const backup = rootLogger.loggers;
-      try {
-        rootLogger.loggers = 99; // Trigger the error
-        warn('Hello World');
-        await new Promise((res) => setTimeout(res, 10));
-      } finally {
-        rootLogger.loggers = backup;
-      }
-    });
-
-    ckEq(logged[0], 'Utter failure logging message: Hello World{}');
-    assert(logged[1].startsWith('Utter failure logging message: Encountered exception while logging!'));
-
-    // Should be restored
-    assertLogs(() => {
-      warn('Hello World');
-    }, [
-      { level: 'warn', message: 'Hello World' },
     ]);
   });
 });

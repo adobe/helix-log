@@ -143,7 +143,11 @@ const makeLogMessage = (fields = {}) => {
  *   Note that these may be ignored if there is an error during inspect().
  */
 const tryInspect = (what, opts = {}) => {
-  const opts_ = { depth: null, breakLength: Infinity, ...opts };
+  const opts_ = {
+    depth: null, breakLength: Infinity, logger: null, ...opts,
+  };
+  const { logger } = opts_;
+  delete opts_.logger;
   const errors = [];
   let msg;
 
@@ -168,8 +172,12 @@ const tryInspect = (what, opts = {}) => {
     if (!opts_.recursiveErrorHandling && errors.length > 0) {
       await new Promise((res) => setImmediate(res));
       for (const e of errors) {
-        const ser = tryInspect(e, { ...opts_, recursiveErrorHandling: true });
-        error(`Error while inspecting object for log message: ${ser}`);
+        const ser = tryInspect(e, { ...opts_, logger, recursiveErrorHandling: true });
+        if (logger) {
+          logger.log({ level: 'error', message: [`Error while inspecting object for log message: ${ser}`] });
+        } else {
+          console.error(`Error while inspecting object for log message: ${ser}`);
+        }
       }
     }
   });
@@ -195,12 +203,15 @@ const serializeMessage = (msg, opts = {}) => {
       join(''),
     );
   } else {
+    const { logger } = opts;
+
     // These are technically invalid, we still handle them gracefully and
     // emit a warning.
-
-    warn.fields(`serializeMessage takes an array or undefined as message. Not ${typename(type(msg))}!`, {
-      invalidMessage: msg,
-    });
+    if (logger) {
+      logger.log({ level: 'warn', message: [`serializeMessage takes an array or undefined as message. Not ${typename(type(msg))}!`], invalidMessage: msg });
+    } else {
+      console.warn(`serializeMessage takes an array or undefined as message. Not ${typename(type(msg))}!`, msg);
+    }
 
     return type(msg) === String ? msg : tryInspect(msg, opts);
   }
@@ -236,11 +247,11 @@ const serializeMessage = (msg, opts = {}) => {
  * @param {Message} fields
  * @return {string}
  */
-const messageFormatSimple = (fields) => {
+const messageFormatSimple = (fields, opts) => {
   // eslint-disable-next-line
   const { level, timestamp, message, ...rest } = fields;
   const full = empty(rest) ? message : [...message, ' ', rest];
-  return `[${level.toUpperCase()}] ${serializeMessage(full)}`;
+  return `[${level.toUpperCase()}] ${serializeMessage(full, opts)}`;
 };
 
 /**
@@ -255,7 +266,7 @@ const messageFormatSimple = (fields) => {
  * @param {Message} fields
  * @returns {string}
  */
-const messageFormatTechnical = (fields) => {
+const messageFormatTechnical = (fields, opts) => {
   const {
     level, timestamp, message, ...rest
   } = fields;
@@ -265,7 +276,7 @@ const messageFormatTechnical = (fields) => {
   const pref = [level.toUpperCase(), ts];
 
   const fullMsg = empty(rest) ? message : [...message, ' ', rest];
-  return `[${join(pref, ' ')}] ${serializeMessage(fullMsg)}`;
+  return `[${join(pref, ' ')}] ${serializeMessage(fullMsg, opts)}`;
 };
 
 /**
@@ -278,11 +289,11 @@ const messageFormatTechnical = (fields) => {
  * @param {Message} fields
  * @returns {string}
  */
-const messageFormatConsole = (fields) => {
+const messageFormatConsole = (fields, opts) => {
   // eslint-disable-next-line
   const { level, timestamp, message, ...rest } = fields;
   const fullMsg = empty(rest) ? message : [...message, ' ', rest];
-  const ser = serializeMessage(fullMsg, { colors: true });
+  const ser = serializeMessage(fullMsg, { colors: true, ...opts });
   const pref = `[${level.toUpperCase()}]`;
 
   if (level === 'info') {
@@ -314,8 +325,8 @@ const messageFormatConsole = (fields) => {
  * @param {*} fields additional log fields
  * @returns {Object}
  */
-const messageFormatJson = ({ message, ...fields }) => jsonifyForLog({
-  message: serializeMessage(message),
+const messageFormatJson = ({ message, ...fields }, opts) => jsonifyForLog({
+  message: serializeMessage(message, opts),
   ...fields,
 });
 
@@ -371,7 +382,9 @@ const __handleLoggingExceptions = (fields, logger, code) => {
         // Defer logging the error (useful with multi logger so all messages
         // are logged before the errors are logged)
         await new Promise((res) => setImmediate(res));
-        error.fields(errorMsg, {
+        logger.log({
+          level: 'error',
+          message: [errorMsg],
           application: 'infrastructure',
           subsystem: 'helix-log-error-handling',
           exception: e,
@@ -518,7 +531,7 @@ class LoggerBase {
         if (formatter === undefined) { // LoggerBase impl
           return this._logImpl(mergedFields);
         } else { // FormattedLoggerBase impl
-          return this._logImpl(this.formatter(mergedFields), fields);
+          return this._logImpl(this.formatter(mergedFields, { logger: this }), fields);
         }
       }
     });
@@ -609,23 +622,25 @@ class ConsoleLogger extends FormattedLoggerBase {
  *
  * @example
  * ```js
- * const { rootLogger } = require('@adobe/helix-shared').log;
+ * const { createDefaultLogger } = require('@adobe/helix-log');
+ *
+ * const logger = createDefaultLogger();
  *
  * // Changing the log level of the default logger:
- * rootLogger.loggers.get('default').level = 'info';
+ * logger.loggers.get('default').level = 'info';
  *
  * // Adding a named logger
- * rootLogger.loggers.set('logfile', new FileLogger('...'));
+ * logger.loggers.set('logfile', new FileLogger('...'));
  *
  * // Adding an anonymous logger (you can add an arbitrary number of these)
  * const name = `logfile-${uuidgen()}`;
- * rootLogger.loggers.set(name, new FileLogger('...'));
+ * logger.loggers.set(name, new FileLogger('...'));
  *
  * // Deleting a logger
- * rootLogger.loggers.delete(name);
+ * logger.loggers.delete(name);
  *
  * // Replacing all loggers
- * rootLogger.loggers = new Map([['default', new ConsoleLogger({level: 'debug'})]]);
+ * logger.loggers = new Map([['default', new ConsoleLogger({level: 'debug'})]]);
  * ```
  *
  * @implements Logger
@@ -654,9 +669,6 @@ class MultiLogger extends LoggerBase {
     each(this.loggers, ([_name, sub]) => {
       __handleLoggingExceptions(fields, sub, async () => {
         await sub.log(fields);
-        if (this === rootLogger) {
-          __globalLogImpl.fwdCount += 1;
-        }
       });
     });
   }
@@ -799,8 +811,8 @@ class MemLogger extends FormattedLoggerBase {
  *
  * @class
  * @param {Object} opts – Optional, named parameters
+ * @param {Logger} opts.logger The helix logger to use
  * @param {string} [opts.level='silly'] The minimum log level to sent to the logger
- * @param {Logger} [opts.logger = rootLogger] The helix logger to use
  * @param {Function} [opts.filter=identity] Will be given every log message to perform
  *   arbitrary transformations; must return either another valid message object or undefined
  *   (in which case the message will be dropped).
@@ -808,7 +820,7 @@ class MemLogger extends FormattedLoggerBase {
  */
 class InterfaceBase {
   constructor({
-    logger = rootLogger, level = 'silly', filter = identity, defaultFields = {}, ...unknown
+    logger, level = 'silly', filter = identity, defaultFields = {}, ...unknown
   } = {}) {
     assign(this, {
       logger, level, filter, defaultFields,
@@ -955,7 +967,7 @@ class SimpleInterface extends /* private */ InterfaceBase {
 }
 
 /**
- * The logger all other loggers attach to.
+ * Creates a MultiLogger with a default console logger attached to it.
  *
  * Must always contain a logger named 'default'; it is very much recommended
  * that the default logger always be a console logger; this can serve as a good
@@ -973,94 +985,11 @@ class SimpleInterface extends /* private */ InterfaceBase {
  *
  * @const
  */
-const rootLogger = new MultiLogger({
-  default: new ConsoleLogger({ level: 'info' }),
-});
-
-let __globalRootLoggerWriteCount = 0;
-const __globalLogImpl = (lvl, ...msg) => {
-  let ex;
-
-  /* istanbul ignore next */
-  try {
-    __globalRootLoggerWriteCount = 0;
-    new SimpleInterface()._logImpl(lvl, ...msg);
-  } catch (e) {
-    ex = e;
-  }
-
-  /* istanbul ignore next */
-  if (ex !== undefined) {
-    console.error('Utter failure logging because:', tryInspect(ex));
-  }
-
-  const logFailure = ex !== undefined
-    || type(rootLogger.loggers) !== Map
-    || (__globalLogImpl.fwdCount === 0 && rootLogger.loggers.size === 0);
-  /* istanbul ignore next */
-  if (logFailure) {
-    console.error('Utter failure logging message:', serializeMessage(msg));
-  }
-};
-
-__globalLogImpl.fwdCount = 0;
-
-/**
- * Log just a message to the rootLogger using the SimpleInterface.
- *
- * Alias for `new SimpleInterface().log(...msg)`.
- *
- * This is not a drop in replacement for console.log, since this
- * does not support string interpolation using `%O/%f/...`, but should
- * cover most use cases.
- *
- * @function
- * @alias silly
- * @alias trace
- * @alias debug
- * @alias verbose
- * @alias info
- * @alias warn
- * @alias error
- * @alias fatal
- * @param {...*} msg The message to write
- */
-const log = (...msg) => __globalLogImpl('log', ...msg, {});
-const fatal = (...msg) => __globalLogImpl('fatal', ...msg, {});
-const error = (...msg) => __globalLogImpl('error', ...msg, {});
-const warn = (...msg) => __globalLogImpl('warn', ...msg, {});
-const info = (...msg) => __globalLogImpl('info', ...msg, {});
-const verbose = (...msg) => __globalLogImpl('verbose', ...msg, {});
-const debug = (...msg) => __globalLogImpl('debug', ...msg, {});
-const trace = (...msg) => __globalLogImpl('trace', ...msg, {});
-const silly = (...msg) => __globalLogImpl('silly', ...msg, {});
-
-/**
- * Log to the rootLogger using the SimpleInterface with custom fields.
- *
- * Alias for `logFields(...msg)`.
- *
- * @function
- * @name log.fields
- * @alias silly.fields
- * @alias trace.fields
- * @alias debug.fields
- * @alias verbose.fields
- * @alias info.fields
- * @alias warn.fields
- * @alias error.fields
- * @alias fatal.fields
- * @param {...*} msg The message to write
- */
-log.fields = (...msg) => __globalLogImpl('log', ...msg);
-fatal.fields = (...msg) => __globalLogImpl('fatal', ...msg);
-error.fields = (...msg) => __globalLogImpl('error', ...msg);
-warn.fields = (...msg) => __globalLogImpl('warn', ...msg);
-info.fields = (...msg) => __globalLogImpl('info', ...msg);
-verbose.fields = (...msg) => __globalLogImpl('verbose', ...msg);
-debug.fields = (...msg) => __globalLogImpl('debug', ...msg);
-trace.fields = (...msg) => __globalLogImpl('trace', ...msg);
-silly.fields = (...msg) => __globalLogImpl('silly', ...msg);
+function createDefaultLogger() {
+  return new MultiLogger({
+    default: new ConsoleLogger({ level: 'info' }),
+  });
+}
 
 module.exports = {
   numericLogLevel,
@@ -1073,7 +1002,7 @@ module.exports = {
   messageFormatJsonString,
   makeLogMessage,
   deriveLogger,
-  __handleLoggingExceptions,
+  createDefaultLogger,
   LoggerBase,
   FormattedLoggerBase,
   ConsoleLogger,
@@ -1082,14 +1011,4 @@ module.exports = {
   MultiLogger,
   InterfaceBase,
   SimpleInterface,
-  rootLogger,
-  fatal,
-  error,
-  info,
-  log,
-  warn,
-  verbose,
-  debug,
-  trace,
-  silly,
 };
