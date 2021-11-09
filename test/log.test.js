@@ -71,7 +71,9 @@ it('tryInspect', async () => {
     // Wait a couple of ticks so we can be sure all the error messages
     // where printed
     for (let i = 0; i < 20; i += 1) {
-      await new Promise((res) => setImmediate(res));
+      await new Promise((res) => {
+        setImmediate(res);
+      });
     }
   });
 
@@ -379,7 +381,9 @@ const testLogger = (T, hasFormatter, args, opts, recordLogs) => {
 
         // Give some time to print the error (potentially multiple times
         // testing debouncing)
-        await new Promise((res) => setTimeout(res, 10));
+        await new Promise((res) => {
+          setTimeout(res, 10);
+        });
       } finally {
         logger.filter = identity; // Restore things
         rootLogger.loggers.delete('b896fa72-ef6d-432b-9c39-b6615bdac130');
@@ -393,7 +397,9 @@ const testLogger = (T, hasFormatter, args, opts, recordLogs) => {
       ]);
 
       // Give some time to really make sure all error messages where collected.
-      await new Promise((res) => setTimeout(res, 10));
+      await new Promise((res) => {
+        setTimeout(res, 10);
+      });
     });
 
     // this doesn't work anymore, since we don't use the global root logger anymore

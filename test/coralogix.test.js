@@ -47,7 +47,9 @@ class MockCoralogixServer {
 
     post(me.server, '/logs', async (req, res) => {
       if (me.delay) {
-        await new Promise((resolve) => setTimeout(resolve, me.delay));
+        await new Promise((resolve) => {
+          setTimeout(resolve, me.delay);
+        });
       }
 
       const dat = await readAll(req);
@@ -73,7 +75,9 @@ class MockCoralogixServer {
   nextReq() {
     assert(!this.stopped);
     const reqP = empty(this.requestQ)
-      ? new Promise((res) => this.requestHandlerQ.push(res))
+      ? new Promise((res) => {
+        this.requestHandlerQ.push(res);
+      })
       : Promise.resolve(this.requestQ.pop());
     return reqP.then(JSON.parse);
   }
@@ -224,8 +228,12 @@ describe('Coralogix Logger', () => {
     ckEq(logger._tasks.length, 1);
     await server.nextReq();
     // wait a tick
-    await new Promise((resolve) => setImmediate(resolve));
-    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => {
+      setImmediate(resolve);
+    });
+    await new Promise((resolve) => {
+      setImmediate(resolve);
+    });
     ckEq(logger._tasks.length, 0);
   });
 
@@ -248,8 +256,12 @@ describe('Coralogix Logger', () => {
     ckEq(logger._tasks.length, 1);
     await server.nextReq();
     // wait a tick
-    await new Promise((resolve) => setImmediate(resolve));
-    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => {
+      setImmediate(resolve);
+    });
+    await new Promise((resolve) => {
+      setImmediate(resolve);
+    });
     ckEq(logger._tasks.length, 0);
   });
 
@@ -290,7 +302,9 @@ describe('Coralogix Logger', () => {
     }));
     ckEq(logger._tasks.length, 1);
     // wait a bit
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 100);
+    });
     ckEq(logger._tasks.length, 0);
   });
 

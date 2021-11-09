@@ -161,7 +161,9 @@ class CoralogixLogger extends FormattedLoggerBase {
         if (e.message === 'Timeout reached') {
           break;
         }
-        await new Promise((res) => setTimeout(res, t));
+        await new Promise((res) => {
+          setTimeout(res, t);
+        });
       }
     }
 

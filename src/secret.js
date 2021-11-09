@@ -56,7 +56,9 @@ class Secret {
       enumerable: false,
       configurable: true,
       get: type(value) === Secret ? (() => value.secret) : (() => value),
-      set: (v) => this._set(v),
+      set: (v) => {
+        this._set(v);
+      },
     });
   }
 
