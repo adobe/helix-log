@@ -66,11 +66,17 @@ it('recordAsyncLogs, assertAsyncLogs', async () => {
 
   // assertLogs: without opts, recordLogs: with opts
   await assertAsyncLogs(rootLogger, async () => {
-    await new Promise((res) => setImmediate(res));
+    await new Promise((res) => {
+      setImmediate(res);
+    });
     log.info('Hello World');
-    await new Promise((res) => setImmediate(res));
+    await new Promise((res) => {
+      setImmediate(res);
+    });
     log.verboseFields('Foo', { x: 42 });
-    await new Promise((res) => setImmediate(res));
+    await new Promise((res) => {
+      setImmediate(res);
+    });
   }, [
     { level: 'info', message: 'Hello World' },
     { level: 'verbose', message: 'Foo', x: 42 },
@@ -81,11 +87,17 @@ it('recordAsyncLogs, assertAsyncLogs', async () => {
 
   // assertLogs: with opts, recordLogs: with opts
   await assertAsyncLogs(rootLogger, { level: 'warn', formatter: messageFormatSimple }, async () => {
-    await new Promise((res) => setImmediate(res));
+    await new Promise((res) => {
+      setImmediate(res);
+    });
     log.info('Hello World');
-    await new Promise((res) => setImmediate(res));
+    await new Promise((res) => {
+      setImmediate(res);
+    });
     log.warnFields('Foo', { foo: 42 });
-    await new Promise((res) => setImmediate(res));
+    await new Promise((res) => {
+      setImmediate(res);
+    });
     log.error('Bar');
   }, [
     '[WARN] Foo { foo: 42 }',

@@ -54,10 +54,18 @@ describe('BigDate', () => {
     ck('from Big Date', bigISO, bigMillis, new BigDate(bigMillis));
 
     const d = new Date(millis);
-    ck('from components', isoLong, millis,
-      d.getFullYear(), d.getMonth(), d.getDate(),
-      d.getHours(), d.getMinutes(), d.getSeconds(),
-      d.getMilliseconds());
+    ck(
+      'from components',
+      isoLong,
+      millis,
+      d.getFullYear(),
+      d.getMonth(),
+      d.getDate(),
+      d.getHours(),
+      d.getMinutes(),
+      d.getSeconds(),
+      d.getMilliseconds(),
+    );
 
     it('from sparse components', () => {
       ckEq(
@@ -67,10 +75,18 @@ describe('BigDate', () => {
     });
 
     const bd = new BigDate(bigMillis);
-    ck('from Big components', bigISO, bigMillis,
-      bd.getFullYear(), bd.getMonth(), bd.getDate(),
-      bd.getHours(), bd.getMinutes(), bd.getSeconds(),
-      bd.preciseTime().mod(1000));
+    ck(
+      'from Big components',
+      bigISO,
+      bigMillis,
+      bd.getFullYear(),
+      bd.getMonth(),
+      bd.getDate(),
+      bd.getHours(),
+      bd.getMinutes(),
+      bd.getSeconds(),
+      bd.preciseTime().mod(1000),
+    );
 
     const ckFromHrtime = (hr) => {
       const ref = new BigDate();
@@ -120,7 +136,9 @@ describe('BigDate', () => {
 
     it('sleep reference', async () => {
       const d0 = new BigDate();
-      await new Promise((res) => setTimeout(res, 5));
+      await new Promise((res) => {
+        setTimeout(res, 5);
+      });
       const d1 = new BigDate();
       const tdiff = d1.preciseTime().sub(d0.preciseTime());
       assert(tdiff.gte(5));

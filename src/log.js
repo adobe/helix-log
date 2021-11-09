@@ -170,7 +170,9 @@ const tryInspect = (what, opts = {}) => {
   // this
   exec(async () => {
     if (!opts_.recursiveErrorHandling && errors.length > 0) {
-      await new Promise((res) => setImmediate(res));
+      await new Promise((res) => {
+        setImmediate(res);
+      });
       for (const e of errors) {
         const ser = tryInspect(e, { ...opts_, logger, recursiveErrorHandling: true });
         if (logger) {
@@ -381,7 +383,9 @@ const __handleLoggingExceptions = (fields, logger, code) => {
       if (!fields.message || !eq(fields.message, [errorMsg])) {
         // Defer logging the error (useful with multi logger so all messages
         // are logged before the errors are logged)
-        await new Promise((res) => setImmediate(res));
+        await new Promise((res) => {
+          setImmediate(res);
+        });
         logger.log({
           level: 'error',
           message: [errorMsg],
