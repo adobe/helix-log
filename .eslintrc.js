@@ -24,5 +24,6 @@ module.exports = {
     'class-methods-use-this': 'off',
     'no-await-in-loop': 'off',
     'no-constant-condition': 'off',
+    'import/extensions': 0,
   },
 };
