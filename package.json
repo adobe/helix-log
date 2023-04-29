@@ -46,7 +46,7 @@
     "mocha-junit-reporter": "2.2.0",
     "mocha-multi-reporters": "1.5.1",
     "nyc": "15.1.0",
-    "semantic-release": "21.0.1",
+    "semantic-release": "21.0.2",
     "uuid": "9.0.0"
   },
   "renovate": {
