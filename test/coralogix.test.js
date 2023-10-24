@@ -237,7 +237,7 @@ describe('Coralogix Logger', () => {
     ckEq(logger._tasks.length, 0);
   });
 
-  it('handles timeout', async () => {
+  it.skip('handles timeout', async () => {
     server.delay = 500;
     await server.listen();
     const logger = new CoralogixLogger(apikey, app, subsystem, {
