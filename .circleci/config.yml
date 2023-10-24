@@ -1,8 +1,8 @@
 version: 2.1
 executors:
-  node14:
+  node18:
     docker:
-      - image: circleci/node:17
+      - image: cimg/node:18.18
     environment:
       NPM_CONFIG_PREFIX: ~/.npm-global
 
@@ -29,7 +29,7 @@ commands:
 
 jobs:
   build:
-    executor: node14
+    executor: node 18
     steps:
       - setup
       - run: mkdir junit
