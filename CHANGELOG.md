@@ -1,3 +1,10 @@
+## [6.0.1](https://github.com/adobe/helix-log/compare/v6.0.0...v6.0.1) (2023-10-24)
+
+
+### Bug Fixes
+
+* **deps:** update external fixes ([210c340](https://github.com/adobe/helix-log/commit/210c340732928bccb110d16256e871c261171ab9))
+
 # [6.0.0](https://github.com/adobe/helix-log/compare/v5.0.5...v6.0.0) (2021-10-20)
 
 
