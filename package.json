@@ -29,7 +29,7 @@
     "big.js": "^6.1.1",
     "colorette": "^2.0.2",
     "ferrum": "^1.9.3",
-    "phin": "^4.0.0",
+    "phin": "^3.7.0",
     "polka": "^0.5.2"
   },
   "devDependencies": {
