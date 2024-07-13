@@ -36,7 +36,7 @@
     "@adobe/eslint-config-helix": "2.0.6",
     "@semantic-release/changelog": "6.0.3",
     "@semantic-release/git": "10.0.1",
-    "ajv": "8.16.0",
+    "ajv": "8.17.1",
     "bunyan": "1.8.15",
     "codecov": "3.8.3",
     "eslint": "8.57.0",
