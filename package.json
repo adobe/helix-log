@@ -41,7 +41,7 @@
     "codecov": "3.8.3",
     "eslint": "8.57.0",
     "jsdoc-to-markdown": "8.0.3",
-    "junit-report-builder": "3.2.1",
+    "junit-report-builder": "4.0.0",
     "mocha": "10.7.0",
     "mocha-junit-reporter": "2.2.1",
     "mocha-multi-reporters": "1.5.1",
