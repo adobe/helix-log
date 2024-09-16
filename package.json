@@ -8,6 +8,7 @@
     "test-ci": "nyc mocha && codecov",
     "lint": "./node_modules/.bin/eslint .",
     "docs": "npx jsdoc2md -t jsdoc2md/README.hbs src/*.js > README.md; echo",
+    "semantic-release-dry": "semantic-release --dry-run --branches $CI_BRANCH",
     "semantic-release": "semantic-release"
   },
   "repository": {
