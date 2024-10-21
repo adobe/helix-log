@@ -1,3 +1,10 @@
+## [6.0.5](https://github.com/adobe/helix-log/compare/v6.0.4...v6.0.5) (2024-10-21)
+
+
+### Bug Fixes
+
+* add test logger ([#365](https://github.com/adobe/helix-log/issues/365)) ([7db927c](https://github.com/adobe/helix-log/commit/7db927cc6574ef309fdd7013a47a2e4fa421bd86))
+
 ## [6.0.4](https://github.com/adobe/helix-log/compare/v6.0.3...v6.0.4) (2024-09-16)
 
 
