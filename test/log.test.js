@@ -79,11 +79,11 @@ it('tryInspect', async () => {
 
   ckEq(list(map(logs, (l) => l.replace(/\n.*$/gm, ''))), [
     '[ERROR] Error while inspecting object for log message: Error: 42',
-    '[ERROR] Error while inspecting object for log message: Error [ERR_INTERNAL_ASSERTION]: Error [ERR_INTERNAL_ASSERTION]: Error: 42',
+    '[ERROR] Error while inspecting object for log message: Error: 42',
     '[ERROR] Error while inspecting object for log message: Error: 90',
     '[ERROR] Error while inspecting object for log message: Error: 90',
-    '[ERROR] Error while inspecting object for log message: Error [ERR_INTERNAL_ASSERTION]: Error [ERR_INTERNAL_ASSERTION]: Error: 90',
-    '[ERROR] Error while inspecting object for log message: Error [ERR_INTERNAL_ASSERTION]: Error [ERR_INTERNAL_ASSERTION]: Error: 90',
+    '[ERROR] Error while inspecting object for log message: Error: 90',
+    '[ERROR] Error while inspecting object for log message: Error: 90',
   ]);
 });
 
