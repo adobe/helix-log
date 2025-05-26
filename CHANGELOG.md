@@ -1,3 +1,10 @@
+## [6.0.6](https://github.com/adobe/helix-log/compare/v6.0.5...v6.0.6) (2025-05-26)
+
+
+### Bug Fixes
+
+* **deps:** update dependency big.js to v7 ([#382](https://github.com/adobe/helix-log/issues/382)) ([54c00c5](https://github.com/adobe/helix-log/commit/54c00c5e30310938e87bceecf9a853f76937d13b))
+
 ## [6.0.5](https://github.com/adobe/helix-log/compare/v6.0.4...v6.0.5) (2024-10-21)
 
 

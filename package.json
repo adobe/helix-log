@@ -1,6 +1,6 @@
 {
   "name": "@adobe/helix-log",
-  "version": "6.0.5",
+  "version": "6.0.6",
   "description": "Logging for Helix",
   "main": "src/index.js",
   "scripts": {
