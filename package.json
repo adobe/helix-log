@@ -27,7 +27,7 @@
   },
   "homepage": "https://github.com/adobe/helix-log#readme",
   "dependencies": {
-    "big.js": "^6.1.1",
+    "big.js": "^7.0.0",
     "colorette": "^2.0.2",
     "ferrum": "^1.9.3",
     "phin": "^3.7.0",
