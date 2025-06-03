@@ -4,6 +4,14 @@
     {
       "matchPackageNames": ["phin"],
       "allowedVersions": "<4.0.0"
+    },
+    {
+      "packageNames": ["@adobe/eslint-config-helix"],
+      "allowedVersions": "<3"
+    },
+    {
+      "packageNames": ["eslint"],
+      "allowedVersions": "<9"
     }
   ]
 }
