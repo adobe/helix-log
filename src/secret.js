@@ -9,8 +9,8 @@
  * OF ANY KIND, either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-const { type } = require('ferrum');
-const { inspect } = require('util');
+import { inspect } from 'node:util';
+import { type } from './util.js';
 
 /**
  * Special wrapper that should be used to protect secret values.
@@ -46,7 +46,7 @@ const { inspect } = require('util');
  *
  * @class
  */
-class Secret {
+export class Secret {
   constructor(value) {
     this._set(value);
   }
@@ -62,13 +62,13 @@ class Secret {
     });
   }
 
+  // eslint-disable-next-line class-methods-use-this
   [inspect.custom]() {
     return '[Hidden Secret]';
   }
 
+  // eslint-disable-next-line class-methods-use-this
   toString() {
     return '[Hidden Secret]';
   }
 }
-
-module.exports = { Secret };

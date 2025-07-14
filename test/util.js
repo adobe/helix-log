@@ -12,12 +12,12 @@
 
 /* eslint-env mocha */
 
-const assert = require('assert');
-const { type, typename, assertEquals } = require('ferrum');
+import assert from 'node:assert';
+import { type, typename } from '../src/util.js';
 
-const ckEq = assertEquals;
+export const ckEq = assert.deepEqual;
 
-const ckThrows = (cls, fn) => {
+export const ckThrows = (cls, fn) => {
   let err;
   assert.throws(fn, (e) => {
     err = e;
@@ -25,8 +25,4 @@ const ckThrows = (cls, fn) => {
   });
   assert(err instanceof cls, `Error (${typename(type(err))}) should be an instance of ${typename(cls)}.`);
   return err;
-};
-
-module.exports = {
-  ckEq, ckThrows,
 };

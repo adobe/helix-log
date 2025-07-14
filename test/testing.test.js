@@ -11,8 +11,8 @@
  */
 
 /* eslint-env mocha */
-const assert = require('assert');
-const { createTestLogger } = require('../src/index');
+import assert from 'node:assert';
+import { createTestLogger } from '../src/index.js';
 
 describe('Test Logger', () => {
   it('Creates test logger and produces output', () => {

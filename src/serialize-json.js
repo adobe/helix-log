@@ -9,12 +9,12 @@
  * OF ANY KIND, either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
+import { URL } from 'node:url';
+import { type, typename } from './util.js';
 
-/* eslint-disable no-use-before-define */
-const { URL } = require('url');
-const {
-  isdef, Trait, list, map, obj, identity, type, typename,
-} = require('ferrum');
+export const JsonifyForLog = {
+  sym: Symbol('JsonifyForLog'),
+};
 
 /**
  * jsonify the given data using the JsonifyForLog trait.
@@ -27,7 +27,7 @@ const {
  *
  * Note that this is specifically designed to serialize data for structured
  * logging. This is NOT suitable for proper serialization of json; specifically
- * this may loose information in cases where that makes sense.
+ * this may lose information in cases where that makes sense.
  *
  * Features a default converter for any exception/subclass of Error.
  *
@@ -37,50 +37,50 @@ const {
  * @param {*} what The object to convert
  * @returns {*} Json compatible object
  */
-const jsonifyForLog = (what) => JsonifyForLog.invoke(what);
-
-/**
- * Trait used to serialize json objects to json. See jsonifyForLog.
- */
-const JsonifyForLog = new Trait('JsonifyForLog');
-JsonifyForLog.impl(undefined, identity);
-JsonifyForLog.impl(String, identity);
-JsonifyForLog.impl(Number, identity);
-JsonifyForLog.impl(Boolean, identity);
-JsonifyForLog.impl(null, identity);
-JsonifyForLog.impl(Object, (what) => obj(map(what, map(jsonifyForLog))));
-JsonifyForLog.impl(Array, (what) => list(map(what, jsonifyForLog)));
-JsonifyForLog.impl(Date, (what) => what.toJSON());
-JsonifyForLog.impl(URL, (what) => what.toString());
-JsonifyForLog.impl(Map, (what) => ({
-  $type: 'Map',
-  values: list(map(what, (inn) => list(map(inn, jsonifyForLog)))),
-}));
-JsonifyForLog.impl(Set, (what) => ({
-  $type: 'Set',
-  values: list(map(what, jsonifyForLog)),
-}));
-JsonifyForLog.implWild((wild) => {
-  // issubclass
-  if (isdef(wild) && (wild.prototype instanceof Error || wild === Error)) {
-    return (what) => ({
-      $type: typename(type(what)),
-      name: what.name,
-      message: what.message,
-      stack: what.stack,
-      code: what.code,
-    });
+export const jsonifyForLog = (what) => {
+  switch (type(what)) {
+    case String:
+    case Number:
+    case Boolean:
+    case undefined:
+    case null:
+      return what;
+    case Object:
+      return Object.fromEntries(Object.entries(what).map(([k, v]) => [k, jsonifyForLog(v)]));
+    case Array:
+      return what.map(jsonifyForLog);
+    case Date:
+      return what.toJSON();
+    case URL:
+      return what.toString();
+    case Map:
+      return {
+        $type: 'Map',
+        values: [...what.entries()].map(([k, v]) => [k, jsonifyForLog(v)]),
+      };
+    case Set:
+      return {
+        $type: 'Set',
+        values: [...what.values()].map((v) => jsonifyForLog(v)),
+      };
+    default:
+      if (type(what[JsonifyForLog.sym]) === Function) {
+        return what[JsonifyForLog.sym]();
+      }
+      if (what instanceof Error || what === Error) {
+        return {
+          $type: typename(type(what)),
+          name: what.name,
+          message: what.message,
+          stack: what.stack,
+          code: what.code,
+        };
+      }
+      if (type(what.toJSON) === Function) {
+        return what.toJSON();
+      } else {
+        const o = jsonifyForLog(Object.fromEntries(Object.entries(what)));
+        return { $type: typename(type(what)), ...o };
+      }
   }
-  return undefined;
-});
-// Fallback exporter
-JsonifyForLog.implWild(() => (what) => {
-  if (type(what.toJSON) === Function) {
-    return what.toJSON();
-  } else {
-    const o = jsonifyForLog(obj(Object.entries(what)));
-    return { $type: typename(type(what)), ...o };
-  }
-});
-
-module.exports = { jsonifyForLog, JsonifyForLog };
+};
