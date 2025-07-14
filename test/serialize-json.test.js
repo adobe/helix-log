@@ -11,15 +11,17 @@
  */
 
 /* eslint-env mocha */
-/* eslint-disable class-methods-use-this */
+/* eslint-disable class-methods-use-this,max-classes-per-file */
+
+import {
+  dict, each, type, typename,
+} from 'ferrum';
+
+import { URL } from 'node:url';
+import { jsonifyForLog, JsonifyForLog } from '../src/index.js';
+import { ckEq } from './util.js';
 
 const { assign } = Object;
-const {
-  each, typename, type, dict,
-} = require('ferrum');
-const { URL } = require('url');
-const { JsonifyForLog, jsonifyForLog } = require('../src/serialize-json');
-const { ckEq } = require('./util');
 
 describe('serialize-json', () => {
   class CustomClass {

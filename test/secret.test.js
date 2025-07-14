@@ -12,10 +12,12 @@
 
 /* eslint-env mocha */
 
-const assert = require('assert');
-const { inspect } = require('util');
-const { Secret } = require('../src/index');
-const { ckEq } = require('./util');
+import assert from 'node:assert';
+import { inspect } from 'node:util';
+
+import { Secret } from '../src/index.js';
+
+import { ckEq } from './util.js';
 
 describe('Secret', () => {
   it('Can be initialized, explicitly set and extracted', () => {

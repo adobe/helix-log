@@ -12,17 +12,16 @@
 
 /* eslint-env mocha */
 
-const { inspect } = require('util');
-const { hrtime } = require('process');
-const assert = require('assert');
-const Big = require('big.js');
-const {
-  each, range0, assertUneq, shallowclone, deepclone,
-} = require('ferrum');
-const {
-  BigDate, _bigFloor, _bigDecimalPlaces, jsonifyForLog,
-} = require('../src');
-const { ckEq } = require('./util');
+import { inspect } from 'node:util';
+import { hrtime } from 'node:process';
+import assert from 'node:assert';
+import Big from 'big.js';
+
+import {
+  assertUneq, deepclone, each, range0, shallowclone,
+} from 'ferrum';
+import { ckEq } from './util.js';
+import { BigDate, jsonifyForLog } from '../src/index.js';
 
 describe('BigDate', () => {
   describe('construction, toISOString(), preciseTime()', () => {

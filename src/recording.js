@@ -10,8 +10,8 @@
  * governing permissions and limitations under the License.
  */
 
-const { dict, assertEquals } = require('ferrum');
-const { MemLogger, messageFormatJson } = require('./log');
+import { assertEquals, dict } from 'ferrum';
+import { MemLogger, messageFormatJson } from './log.js';
 
 /**
  * Message format used for comparing logs in tests.
@@ -26,7 +26,7 @@ const { MemLogger, messageFormatJson } = require('./log');
  * @param {Message} fields
  * @returns {Object}
  */
-const messageFormatJsonStatic = (fields) => {
+export const messageFormatJsonStatic = (fields) => {
   const r = messageFormatJson(fields);
   delete r.timestamp;
   return r;
@@ -62,7 +62,7 @@ const messageFormatJsonStatic = (fields) => {
  * @param {Function} fn - The logs that this code emits will be recorded.
  * @returns {string} The logs that where produced by the codee
  */
-const recordLogs = (rootLogger, opts, fn) => {
+export const recordLogs = (rootLogger, opts, fn) => {
   if (opts instanceof Function) {
     return recordLogs(rootLogger, {}, opts);
   }
@@ -103,7 +103,7 @@ const recordLogs = (rootLogger, opts, fn) => {
  * @param {Function} fn - The logs that this code emits will be recorded.
  * @param {string} logs
  */
-const assertLogs = (rootLogger, opts, fn, logs) => {
+export const assertLogs = (rootLogger, opts, fn, logs) => {
   if (opts instanceof Function) {
     assertLogs(rootLogger, {}, opts, fn);
   } else {
@@ -126,7 +126,7 @@ const assertLogs = (rootLogger, opts, fn, logs) => {
  * @param {Function} fn - The logs that this code emits will be recorded.
  * @returns {string} The logs that where produced by the code
  */
-const recordAsyncLogs = async (rootLogger, opts, fn) => {
+export const recordAsyncLogs = async (rootLogger, opts, fn) => {
   if (opts instanceof Function) {
     return recordAsyncLogs(rootLogger, {}, opts);
   }
@@ -157,7 +157,7 @@ const recordAsyncLogs = async (rootLogger, opts, fn) => {
  * @param {Function} fn - The logs that this code emits will be recorded.
  * @param {string} logs
  */
-const assertAsyncLogs = async (rootLogger, opts, fn, logs) => {
+export const assertAsyncLogs = async (rootLogger, opts, fn, logs) => {
   if (opts instanceof Function) {
     await assertAsyncLogs(rootLogger, {}, opts, fn);
   } else {
@@ -166,8 +166,4 @@ const assertAsyncLogs = async (rootLogger, opts, fn, logs) => {
       logs,
     );
   }
-};
-
-module.exports = {
-  messageFormatJsonStatic, recordLogs, assertLogs, recordAsyncLogs, assertAsyncLogs,
 };

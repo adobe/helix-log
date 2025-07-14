@@ -11,31 +11,38 @@
  */
 
 /* eslint-env mocha */
-/* eslint-disable no-console, no-param-reassign */
+/* eslint-disable no-console, no-param-reassign,max-classes-per-file,no-unused-vars */
 
-const assert = require('assert');
-const stream = require('stream');
-const {
-  openSync, readFileSync, ftruncateSync,
-} = require('fs');
-const { inspect } = require('util');
-const { v4: uuidgen } = require('uuid');
-const {
-  black, bgRed, bgYellow, yellow, green, bgBlackBright, bgBlueBright,
-} = require('colorette');
-const {
-  join, pipe, map, identity, size, exec, type, list, last,
-} = require('ferrum');
-const {
-  numericLogLevel, serializeMessage, ConsoleLogger,
-  recordAsyncLogs, tryInspect, messageFormatJsonString,
-  FileLogger, MemLogger, MultiLogger, messageFormatSimple,
-  messageFormatTechnical, messageFormatConsole, messageFormatJson,
-  messageFormatJsonStatic, SimpleInterface, makeLogMessage,
-  assertLogs, BigDate, deriveLogger,
-  createDefaultLogger,
-} = require('../src');
-const { ckEq, ckThrows } = require('./util');
+import assert from 'node:assert';
+import stream from 'node:stream';
+import { ftruncateSync, openSync, readFileSync } from 'node:fs';
+
+import { inspect } from 'node:util';
+
+import {
+  bgBlackBright, bgBlueBright, bgRed, bgYellow, black, green, yellow,
+} from 'colorette';
+
+import {
+  exec, identity, join, last, list, map, pipe, size, type,
+} from 'ferrum';
+
+import {
+  assertLogs, BigDate,
+  ConsoleLogger, createDefaultLogger, deriveLogger,
+  FileLogger, makeLogMessage,
+  MemLogger, messageFormatConsole, messageFormatJson, messageFormatJsonStatic,
+  messageFormatJsonString,
+  messageFormatSimple,
+  messageFormatTechnical,
+  MultiLogger,
+  numericLogLevel,
+  recordAsyncLogs,
+  serializeMessage, SimpleInterface,
+  tryInspect,
+} from '../src/index.js';
+
+import { ckEq, ckThrows } from './util.js';
 
 it('numericLogLevel', () => {
   assert.strictEqual(numericLogLevel('fatal'), 0);
@@ -43,6 +50,7 @@ it('numericLogLevel', () => {
 });
 
 class BrokenInspect {
+  // eslint-disable-next-line class-methods-use-this
   [inspect.custom]() {
     throw new Error('42');
   }
@@ -71,6 +79,7 @@ it('tryInspect', async () => {
     // Wait a couple of ticks so we can be sure all the error messages
     // where printed
     for (let i = 0; i < 20; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
       await new Promise((res) => {
         setImmediate(res);
       });
@@ -431,7 +440,7 @@ describe('ConsoleLogger', async () => {
 });
 
 describe('FileLogger', async () => {
-  const tmpfile = `/tmp/helix-shared-testfile-${uuidgen()}.txt`;
+  const tmpfile = `/tmp/helix-shared-testfile-${crypto.randomUUID()}.txt`;
   const fd = openSync(tmpfile, 'a+');
 
   try {

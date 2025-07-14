@@ -10,21 +10,34 @@
  * governing permissions and limitations under the License.
  */
 
-/* eslint-disable no-console, no-param-reassign, no-use-before-define */
+/* eslint-disable no-console, no-param-reassign, no-use-before-define,no-unused-vars */
+/* eslint-disable no-underscore-dangle, max-classes-per-file */
 /* eslint-disable consistent-return, lines-between-class-members, implicit-arrow-linebreak */
+import { inspect } from 'node:util';
+import {
+  bgBlackBright, bgBlueBright, bgRed, bgYellow, black,
+} from 'colorette';
+
+import {
+  dict,
+  each,
+  empty, eq,
+  exec,
+  identity,
+  intersperse,
+  isdef,
+  join,
+  list, map, pipe,
+  type,
+  typename,
+} from 'ferrum';
+
+import { closeSync, openSync, writeSync } from 'node:fs';
+
+import { BigDate } from './big-date.js';
+import { jsonifyForLog } from './serialize-json.js';
 
 const { assign } = Object;
-const { inspect } = require('util');
-const {
-  black, bgRed, bgYellow, bgBlackBright, bgBlueBright,
-} = require('colorette');
-const {
-  dict, exec, isdef, each, join, type, list, identity,
-  intersperse, typename, empty, eq, pipe, map,
-} = require('ferrum');
-const { openSync, closeSync, writeSync } = require('fs');
-const { BigDate } = require('./big-date');
-const { jsonifyForLog } = require('./serialize-json');
 
 // This is the superset of log levels supported by console, bunyan and winston
 const __loglevelMap = {
@@ -46,7 +59,7 @@ const __loglevelMap = {
  * @param {string} name Name of the log level
  * @returns {number} The numeric log level
  */
-const numericLogLevel = (name) => {
+export const numericLogLevel = (name) => {
   const r = __loglevelMap[name];
   /* istanbul ignore next */
   if (r === undefined) {
@@ -115,7 +128,7 @@ numericLogLevel.__loglevelMap = __loglevelMap;
  *   any default values
  * @returns {Message}
  */
-const makeLogMessage = (fields = {}) => {
+export const makeLogMessage = (fields = {}) => {
   const r = {
     level: 'info',
     timestamp: new BigDate(),
@@ -142,7 +155,7 @@ const makeLogMessage = (fields = {}) => {
  * @param {Object} opts Options will be passed through to inspect.
  *   Note that these may be ignored if there is an error during inspect().
  */
-const tryInspect = (what, opts = {}) => {
+export const tryInspect = (what, opts = {}) => {
   const opts_ = {
     depth: null, breakLength: Infinity, logger: null, ...opts,
   };
@@ -195,7 +208,7 @@ const tryInspect = (what, opts = {}) => {
  * @param {Object} opts – Parameters are forwarded to tryInspect()
  * @returns {string}
  */
-const serializeMessage = (msg, opts = {}) => {
+export const serializeMessage = (msg, opts = {}) => {
   if (msg === undefined) { // No message at all (which is OK!)
     return '';
   } else if (type(msg) === Array) { // Message is an array (as is proper)
@@ -249,7 +262,7 @@ const serializeMessage = (msg, opts = {}) => {
  * @param {Message} fields
  * @return {string}
  */
-const messageFormatSimple = (fields, opts) => {
+export const messageFormatSimple = (fields, opts) => {
   // eslint-disable-next-line
   const { level, timestamp, message, ...rest } = fields;
   const full = empty(rest) ? message : [...message, ' ', rest];
@@ -268,7 +281,7 @@ const messageFormatSimple = (fields, opts) => {
  * @param {Message} fields
  * @returns {string}
  */
-const messageFormatTechnical = (fields, opts) => {
+export const messageFormatTechnical = (fields, opts) => {
   const {
     level, timestamp, message, ...rest
   } = fields;
@@ -291,7 +304,7 @@ const messageFormatTechnical = (fields, opts) => {
  * @param {Message} fields
  * @returns {string}
  */
-const messageFormatConsole = (fields, opts) => {
+export const messageFormatConsole = (fields, opts) => {
   // eslint-disable-next-line
   const { level, timestamp, message, ...rest } = fields;
   const fullMsg = empty(rest) ? message : [...message, ' ', rest];
@@ -327,7 +340,7 @@ const messageFormatConsole = (fields, opts) => {
  * @param {*} fields additional log fields
  * @returns {Object}
  */
-const messageFormatJson = ({ message, ...fields }, opts) => jsonifyForLog({
+export const messageFormatJson = ({ message, ...fields }, opts) => jsonifyForLog({
   message: serializeMessage(message, opts),
   ...fields,
 });
@@ -342,7 +355,7 @@ const messageFormatJson = ({ message, ...fields }, opts) => jsonifyForLog({
  * @param {Message} fields
  * @returns {Object}
  */
-const messageFormatJsonString = (fields) => JSON.stringify(messageFormatJson(fields));
+export const messageFormatJsonString = (fields) => JSON.stringify(messageFormatJson(fields));
 
 /**
  * Helper function that creates a derived logger that is derived from a given logger, merging
@@ -354,7 +367,7 @@ const messageFormatJsonString = (fields) => JSON.stringify(messageFormatJson(fie
  * @param {object} opts Options to merge with this logger
  * @returns {Logger} A new logger with updated options.
  */
-const deriveLogger = (logger, opts) => {
+export const deriveLogger = (logger, opts) => {
   const { defaultFields: optFields = {}, ...rest } = opts;
   const defaultFields = { ...logger.defaultFields, ...optFields };
   return new logger.constructor({ ...logger, defaultFields, ...rest });
@@ -501,7 +514,7 @@ const __handleLoggingExceptions = (fields, logger, code) => {
  *   arbitrary transformations; must return either another valid message object or undefined
  *   (in which case the message will be dropped).
  */
-class LoggerBase {
+export class LoggerBase {
   /**
    * The minimum log level for messages to be printed.
    * Feel free to change to one of the available levels.
@@ -545,7 +558,7 @@ class LoggerBase {
     return this.__logWithFormatter(fields, undefined);
   }
 
-  // eslint-disable-next-line no-empty-function
+  // eslint-disable-next-line no-empty-function,class-methods-use-this
   async flush() { }
 }
 
@@ -570,7 +583,7 @@ class LoggerBase {
  *   will be used to convert the message into a format compatible with
  *   the external resource.
  */
-class FormattedLoggerBase extends LoggerBase {
+export class FormattedLoggerBase extends LoggerBase {
   /**
    * Formatter used to format all the messages.
    * Must yield an object suitable for the external resource
@@ -600,7 +613,7 @@ class FormattedLoggerBase extends LoggerBase {
  * @class
  * @param {Writable} [opts.stream=console._stderr] A writable stream to log to.
  */
-class ConsoleLogger extends FormattedLoggerBase {
+export class ConsoleLogger extends FormattedLoggerBase {
   /**
    * Writable stream to write log messages to. Usually console._stderr.
    * @memberOf ConsoleLogger#
@@ -651,7 +664,7 @@ class ConsoleLogger extends FormattedLoggerBase {
  * @class
  * @parameter {Sequence<Loggers>} loggers – The loggers to forward to.
  */
-class MultiLogger extends LoggerBase {
+export class MultiLogger extends LoggerBase {
   /*
    * The list of loggers this is forwarding to. Feel free to mutate
    * or replace.
@@ -695,7 +708,7 @@ class MultiLogger extends LoggerBase {
  * @param {string|Integer} name - The path of the file to log to
  *   OR the unix file descriptor to log to.
  */
-class FileLogger extends FormattedLoggerBase {
+export class FileLogger extends FormattedLoggerBase {
   /**
    * The underlying operating system file descriptor.
    * @memberOf FileLogger#
@@ -726,7 +739,7 @@ class FileLogger extends FormattedLoggerBase {
  * @class
  * @implements Logger
  */
-class MemLogger extends FormattedLoggerBase {
+export class MemLogger extends FormattedLoggerBase {
   /**
    * An array that holds all the messages logged thus far.
    * May be modified An array that holds all the messages logged thus far.
@@ -822,7 +835,7 @@ class MemLogger extends FormattedLoggerBase {
  *   (in which case the message will be dropped).
  * @param {object} [opts.defaultFields] Additional log fields to add to every log message.
  */
-class InterfaceBase {
+export class InterfaceBase {
   constructor({
     logger, level = 'silly', filter = identity, defaultFields = {}, ...unknown
   } = {}) {
@@ -867,7 +880,7 @@ class InterfaceBase {
  * @class
  * @implements LoggingInterface
  */
-class SimpleInterface extends /* private */ InterfaceBase {
+export class SimpleInterface extends /* private */ InterfaceBase {
   _logImpl(level, ...msg) {
     const fields = msg.pop();
     /* istanbul ignore next */
@@ -989,30 +1002,8 @@ class SimpleInterface extends /* private */ InterfaceBase {
  *
  * @const
  */
-function createDefaultLogger() {
+export function createDefaultLogger() {
   return new MultiLogger({
     default: new ConsoleLogger({ level: 'info' }),
   });
 }
-
-module.exports = {
-  numericLogLevel,
-  tryInspect,
-  serializeMessage,
-  messageFormatSimple,
-  messageFormatTechnical,
-  messageFormatConsole,
-  messageFormatJson,
-  messageFormatJsonString,
-  makeLogMessage,
-  deriveLogger,
-  createDefaultLogger,
-  LoggerBase,
-  FormattedLoggerBase,
-  ConsoleLogger,
-  FileLogger,
-  MemLogger,
-  MultiLogger,
-  InterfaceBase,
-  SimpleInterface,
-};

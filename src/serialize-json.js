@@ -11,10 +11,10 @@
  */
 
 /* eslint-disable no-use-before-define */
-const { URL } = require('url');
-const {
-  isdef, Trait, list, map, obj, identity, type, typename,
-} = require('ferrum');
+import { URL } from 'node:url';
+import {
+  identity, isdef, list, map, obj, Trait, type, typename,
+} from 'ferrum';
 
 /**
  * jsonify the given data using the JsonifyForLog trait.
@@ -27,7 +27,7 @@ const {
  *
  * Note that this is specifically designed to serialize data for structured
  * logging. This is NOT suitable for proper serialization of json; specifically
- * this may loose information in cases where that makes sense.
+ * this may lose information in cases where that makes sense.
  *
  * Features a default converter for any exception/subclass of Error.
  *
@@ -37,12 +37,12 @@ const {
  * @param {*} what The object to convert
  * @returns {*} Json compatible object
  */
-const jsonifyForLog = (what) => JsonifyForLog.invoke(what);
+export const jsonifyForLog = (what) => JsonifyForLog.invoke(what);
 
 /**
  * Trait used to serialize json objects to json. See jsonifyForLog.
  */
-const JsonifyForLog = new Trait('JsonifyForLog');
+export const JsonifyForLog = new Trait('JsonifyForLog');
 JsonifyForLog.impl(undefined, identity);
 JsonifyForLog.impl(String, identity);
 JsonifyForLog.impl(Number, identity);
@@ -82,5 +82,3 @@ JsonifyForLog.implWild(() => (what) => {
     return { $type: typename(type(what)), ...o };
   }
 });
-
-module.exports = { jsonifyForLog, JsonifyForLog };

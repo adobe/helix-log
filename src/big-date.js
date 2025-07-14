@@ -9,14 +9,15 @@
  * OF ANY KIND, either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
+/* eslint-disable no-underscore-dangle */
+import { inspect } from 'node:util';
+import { hrtime } from 'node:process';
+import Big from 'big.js';
+import {
+  Deepclone, Equals, join, repeat, Shallowclone, size, take, type, typename,
+} from 'ferrum';
+
 const { max, floor, abs } = Math;
-const { inspect } = require('util');
-const { hrtime } = require('process');
-const Big = require('big.js');
-const {
-  size, type, typename, join, take, repeat,
-  Shallowclone, Deepclone, Equals,
-} = require('ferrum');
 
 // Here we calculate the offset between a hrtime() derived epoch
 // and a new Date() derived one. This will allow us to derive the
@@ -134,7 +135,7 @@ let _hrtimeOffset = _calcHrtimeOff();
  * @param {...*} Can be used to construct a BigDate from components (year, month, day, hours,
  *   minutes, seconds, milliseconds with decimal places)
  */
-class BigDate extends Date {
+export class BigDate extends Date {
   /**
    * The nanosecond component not stored by the Date base.
    *
@@ -334,6 +335,7 @@ class BigDate extends Date {
     // Extract the number of seconds with decimal places;
     // this assumes the string is an ISO 8601 date with sub-seconds.
     // If the regexp search failed, = then we just use the date.
+    // eslint-disable-next-line no-unused-vars
     const [_a, secLit] = s_.match(/:(\d{1,2}\.\d*)(Z|[+-]\d+)?$/) || [];
     /* istanbul ignore next */
     if (!secLit) {
@@ -422,5 +424,3 @@ class BigDate extends Date {
     return new BigDate(this);
   }
 }
-
-module.exports = { BigDate };

@@ -9,16 +9,9 @@
  * OF ANY KIND, either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-
-/* eslint-disable global-require */
-
-module.exports = {
-  ...require('./big-date'),
-  ...require('./recording'),
-  ...require('./log'),
-  ...require('./serialize-json'),
-  ...require('./coralogix'),
-  ...require('./bunyan'),
-  ...require('./secret'),
-  ...require('./testing'),
-};
+export * from './big-date.js';
+export * from './testing.js';
+export * from './secret.js';
+export * from './serialize-json.js';
+export * from './log.js';
+export * from './recording.js';

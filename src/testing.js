@@ -9,7 +9,7 @@
  * OF ANY KIND, either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-const { MemLogger, serializeMessage, SimpleInterface } = require('./log');
+import { MemLogger, serializeMessage, SimpleInterface } from './log.js';
 
 const ANSI_REGEXP = RegExp([
   '[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\\u0007)',
@@ -26,7 +26,7 @@ const ANSI_REGEXP = RegExp([
  * @params {bool} [config.keepANSI=false] enable to keep ANSI characters in string
  * @returns {SimpleInterface}
  */
-function createTestLogger(config = {}) {
+export function createTestLogger(config = {}) {
   const memLogger = new MemLogger({
     level: 'silly',
   });
@@ -49,7 +49,3 @@ function createTestLogger(config = {}) {
     },
   });
 }
-
-module.exports = {
-  createTestLogger,
-};

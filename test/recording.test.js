@@ -12,12 +12,15 @@
 
 /* eslint-env mocha */
 
-const assert = require('assert');
-const {
-  assertAsyncLogs, assertLogs, recordLogs, recordAsyncLogs,
-  ConsoleLogger, messageFormatSimple,
-  createDefaultLogger, SimpleInterface,
-} = require('../src');
+import assert from 'node:assert';
+import {
+  assertAsyncLogs,
+  assertLogs,
+  ConsoleLogger, createDefaultLogger,
+  messageFormatSimple,
+  recordAsyncLogs,
+  recordLogs, SimpleInterface,
+} from '../src/index.js';
 
 it('recordLogs, assertLogs', () => {
   const rootLogger = createDefaultLogger();
