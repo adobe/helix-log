@@ -18,24 +18,15 @@ import {
   bgBlackBright, bgBlueBright, bgRed, bgYellow, black,
 } from 'colorette';
 
-import {
-  dict,
-  each,
-  empty, eq,
-  exec,
-  identity,
-  intersperse,
-  isdef,
-  join,
-  list, map, pipe,
-  type,
-  typename,
-} from 'ferrum';
-
 import { closeSync, openSync, writeSync } from 'node:fs';
-
-import { BigDate } from './big-date.js';
 import { jsonifyForLog } from './serialize-json.js';
+import {
+  typename,
+  type,
+  empty,
+  identity,
+  isdef,
+} from './util.js';
 
 const { assign } = Object;
 
@@ -131,7 +122,7 @@ numericLogLevel.__loglevelMap = __loglevelMap;
 export const makeLogMessage = (fields = {}) => {
   const r = {
     level: 'info',
-    timestamp: new BigDate(),
+    timestamp: new Date(),
     ...fields,
   };
   if ('message' in r) {
@@ -181,7 +172,7 @@ export const tryInspect = (what, opts = {}) => {
 
   // Log that we encountered errors during inspecting after we printed
   // this
-  exec(async () => {
+  (async () => {
     if (!opts_.recursiveErrorHandling && errors.length > 0) {
       await new Promise((res) => {
         setImmediate(res);
@@ -195,7 +186,7 @@ export const tryInspect = (what, opts = {}) => {
         }
       }
     }
-  });
+  })();
 
   return isdef(msg) ? msg : '<<COULD NOT INSPECT>>';
 };
@@ -212,11 +203,9 @@ export const serializeMessage = (msg, opts = {}) => {
   if (msg === undefined) { // No message at all (which is OK!)
     return '';
   } else if (type(msg) === Array) { // Message is an array (as is proper)
-    return pipe(
-      msg,
-      map((v) => (type(v) === String ? v : tryInspect(v, opts))),
-      join(''),
-    );
+    return msg
+      .map((v) => (type(v) === String ? v : tryInspect(v, opts)))
+      .join('');
   } else {
     const { logger } = opts;
 
@@ -291,7 +280,7 @@ export const messageFormatTechnical = (fields, opts) => {
   const pref = [level.toUpperCase(), ts];
 
   const fullMsg = empty(rest) ? message : [...message, ' ', rest];
-  return `[${join(pref, ' ')}] ${serializeMessage(fullMsg, opts)}`;
+  return `[${pref.join(' ')}] ${serializeMessage(fullMsg, opts)}`;
 };
 
 /**
@@ -387,13 +376,13 @@ export const deriveLogger = (logger, opts) => {
  * @returns {Message}
  */
 const __handleLoggingExceptions = (fields, logger, code) => {
-  exec(async () => {
+  (async () => {
     try {
       await code();
     } catch (e) {
       const errorMsg = 'Encountered exception while logging!';
       // Debounce error messages
-      if (!fields.message || !eq(fields.message, [errorMsg])) {
+      if (!fields.message || fields.message[0] !== errorMsg) {
         // Defer logging the error (useful with multi logger so all messages
         // are logged before the errors are logged)
         await new Promise((res) => {
@@ -409,7 +398,7 @@ const __handleLoggingExceptions = (fields, logger, code) => {
         });
       }
     }
-  });
+  })();
 };
 
 /**
@@ -438,7 +427,7 @@ const __handleLoggingExceptions = (fields, logger, code) => {
  *
  * Loggers SHOULD provide a named constructor option 'filter' and associated field
  * that can be used to transform messages arbitrarily. This option should default to
- * the `identity()` function from ferrum. If the filter returns `undefined`
+ * the `identity()` function. If the filter returns `undefined`
  * the message MUST be discarded.
  *
  * Loggers SHOULD provide a named constructor option 'defaultFields'; if they do support the
@@ -675,15 +664,15 @@ export class MultiLogger extends LoggerBase {
 
   constructor(loggers, opts = {}) {
     super(opts);
-    this.loggers = dict(loggers);
+    this.loggers = new Map(Object.entries(loggers));
   }
 
   async flush() {
-    return Promise.all(map(this.loggers, ([_name, sub]) => sub.flush()));
+    return Promise.all(this.loggers.values().map((sub) => sub.flush()));
   }
 
   _logImpl(fields) {
-    each(this.loggers, ([_name, sub]) => {
+    this.loggers.forEach((sub) => {
       __handleLoggingExceptions(fields, sub, async () => {
         await sub.log(fields);
       });
@@ -793,7 +782,7 @@ export class MemLogger extends FormattedLoggerBase {
  *
  * LoggingInterfaces SHOULD provide a named constructor option 'filter' and associated field
  * that can be used to transform messages arbitrarily. This option should default to
- * the `identity()` function from ferrum. If the filter returns `undefined`
+ * the `identity()` function. If the filter returns `undefined`
  * the message MUST be discarded.
  *
  * LoggingInterfaces SHOULD provide a named constructor option 'defaultFields'; if they do support
@@ -888,9 +877,7 @@ export class SimpleInterface extends /* private */ InterfaceBase {
       throw new Error('Data given as the last argument the helix-log '
         + `SimpleInterface must be a plain Object, not a ${typename(type(fields))}.`);
     }
-
-    const message = list(intersperse(msg, ' '));
-    super._logImpl({ message, level, ...fields });
+    super._logImpl({ message: msg, level, ...fields });
   }
 
   /**

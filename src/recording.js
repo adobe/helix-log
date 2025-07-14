@@ -10,7 +10,7 @@
  * governing permissions and limitations under the License.
  */
 
-import { assertEquals, dict } from 'ferrum';
+import assert from 'node:assert';
 import { MemLogger, messageFormatJson } from './log.js';
 
 /**
@@ -71,7 +71,7 @@ export const recordLogs = (rootLogger, opts, fn) => {
   const logger = new MemLogger(opts);
   try {
     // eslint-disable-next-line no-param-reassign
-    rootLogger.loggers = dict({ default: logger });
+    rootLogger.loggers = new Map([['default', logger]]);
     fn();
   } finally {
     // eslint-disable-next-line no-param-reassign
@@ -107,7 +107,7 @@ export const assertLogs = (rootLogger, opts, fn, logs) => {
   if (opts instanceof Function) {
     assertLogs(rootLogger, {}, opts, fn);
   } else {
-    assertEquals(
+    assert.deepEqual(
       recordLogs(rootLogger, { formatter: messageFormatJsonStatic, ...opts }, fn),
       logs,
     );
@@ -135,7 +135,7 @@ export const recordAsyncLogs = async (rootLogger, opts, fn) => {
   const logger = new MemLogger(opts);
   try {
     // eslint-disable-next-line no-param-reassign
-    rootLogger.loggers = dict({ default: logger });
+    rootLogger.loggers = new Map([['default', logger]]);
     await fn();
   } finally {
     // eslint-disable-next-line no-param-reassign
@@ -161,7 +161,7 @@ export const assertAsyncLogs = async (rootLogger, opts, fn, logs) => {
   if (opts instanceof Function) {
     await assertAsyncLogs(rootLogger, {}, opts, fn);
   } else {
-    assertEquals(
+    assert.deepEqual(
       await recordAsyncLogs(rootLogger, { formatter: messageFormatJsonStatic, ...opts }, fn),
       logs,
     );

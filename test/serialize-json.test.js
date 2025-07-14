@@ -12,14 +12,10 @@
 
 /* eslint-env mocha */
 /* eslint-disable class-methods-use-this,max-classes-per-file */
-
-import {
-  dict, each, type, typename,
-} from 'ferrum';
-
 import { URL } from 'node:url';
 import { jsonifyForLog, JsonifyForLog } from '../src/index.js';
 import { ckEq } from './util.js';
+import { typename, type } from '../src/util.js';
 
 const { assign } = Object;
 
@@ -32,7 +28,7 @@ describe('serialize-json', () => {
 
   class CustomFallbackClass {
     constructor() {
-      assign(this, { foo: 42, bar: dict({ bar: 23 }) });
+      assign(this, { foo: 42, bar: new Map([['bar', 23]]) });
     }
   }
 
@@ -118,7 +114,7 @@ describe('serialize-json', () => {
   };
 
   // Test each basic example
-  each(flatInp, ([key, what]) => {
+  Object.entries(flatInp).forEach(([key, what]) => {
     it(`serializes ${typename(type(what))}`, () => {
       ckEq(jsonifyForLog(what), flatOut[key]);
     });

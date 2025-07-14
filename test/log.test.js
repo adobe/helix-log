@@ -16,19 +16,13 @@
 import assert from 'node:assert';
 import stream from 'node:stream';
 import { ftruncateSync, openSync, readFileSync } from 'node:fs';
-
 import { inspect } from 'node:util';
-
 import {
   bgBlackBright, bgBlueBright, bgRed, bgYellow, black, green, yellow,
 } from 'colorette';
 
 import {
-  exec, identity, join, last, list, map, pipe, size, type,
-} from 'ferrum';
-
-import {
-  assertLogs, BigDate,
+  assertLogs,
   ConsoleLogger, createDefaultLogger, deriveLogger,
   FileLogger, makeLogMessage,
   MemLogger, messageFormatConsole, messageFormatJson, messageFormatJsonStatic,
@@ -43,6 +37,7 @@ import {
 } from '../src/index.js';
 
 import { ckEq, ckThrows } from './util.js';
+import { type, identity } from '../src/util.js';
 
 it('numericLogLevel', () => {
   assert.strictEqual(numericLogLevel('fatal'), 0);
@@ -86,7 +81,7 @@ it('tryInspect', async () => {
     }
   });
 
-  ckEq(list(map(logs, (l) => l.replace(/\n.*$/gm, ''))), [
+  ckEq(logs.map((l) => l.replace(/\n.*$/gm, '')), [
     '[ERROR] Error while inspecting object for log message: Error: 42',
     '[ERROR] Error while inspecting object for log message: Error: 42',
     '[ERROR] Error while inspecting object for log message: Error: 90',
@@ -152,7 +147,7 @@ it('messageFormatSimple', () => {
 
 it('messageFormatTechnical', () => {
   const ck = (fields, exp) => {
-    const t = new BigDate();
+    const t = new Date();
     const msg = makeLogMessage(fields);
 
     // Discard the time (because it's hard to test for that)
@@ -161,9 +156,7 @@ it('messageFormatTechnical', () => {
 
     ckEq(level, msg.level.toUpperCase());
     ckEq(txt, exp);
-    assert(new BigDate(date).preciseTime()
-      .minus(t.preciseTime())
-      .lt(1.0));
+    assert(new Date(date).valueOf() - t.valueOf() < 1.0);
   };
   ck(
     { message: ['Hello ', { foo: 42 }, ' World'] },
@@ -215,17 +208,17 @@ it('messageFormatJson, messageFormatJsonString', () => {
 });
 
 it('makeLogMessage', () => {
-  exec(() => {
+  (() => {
     const { timestamp, ...fields } = makeLogMessage();
     assert(timestamp instanceof Date);
     ckEq(fields, { level: 'info' });
-  });
+  })();
 
-  exec(() => {
+  (() => {
     const { timestamp, ...fields } = makeLogMessage({ foo: 23 });
     assert(timestamp instanceof Date);
     ckEq(fields, { level: 'info', foo: 23 });
-  });
+  })();
 });
 
 class StringStream extends stream.Writable {
@@ -240,7 +233,7 @@ class StringStream extends stream.Writable {
   }
 
   extract() {
-    return join(this._buf, '');
+    return this._buf.join('');
   }
 }
 
@@ -283,12 +276,9 @@ const testLogger = (T, hasFormatter, args, opts, recordLogs) => {
     logger.formatter = messageFormatJsonString;
   }
 
-  const recordJsonLogs = (fn) => pipe(
-    recordLogs(logger, fn),
-    map(JSON.parse),
-    map(({ timestamp: _, ...fields }) => fields),
-    list,
-  );
+  const recordJsonLogs = (fn) => recordLogs(logger, fn)
+    .map(JSON.parse)
+    .map(({ timestamp: _, ...fields }) => fields);
 
   const ckStrLogs = (fn, expect) => ckEq(recordLogs(logger, fn), expect);
   const ckJsonLogs = (fn, expect) => ckEq(recordJsonLogs(fn), expect);
@@ -413,7 +403,7 @@ const testLogger = (T, hasFormatter, args, opts, recordLogs) => {
 
     // this doesn't work anymore, since we don't use the global root logger anymore
     // in the exception handling
-    ckEq(size(reports), 0);
+    ckEq(reports.length, 0);
     // ckEq(reports[0].message, ['Encountered exception while logging!']);
     // assert(reports[0].exception instanceof Error);
     // ckEq(reports[0].logger, logger);
@@ -432,7 +422,7 @@ describe('ConsoleLogger', async () => {
     }
 
     const r = ss.extract().split('\n');
-    if (last(r) === '') {
+    if (r.at(-1) === '') {
       r.pop();
     }
     return r;
@@ -448,7 +438,7 @@ describe('FileLogger', async () => {
       ftruncateSync(fd);
       fn();
       const r = readFileSync(tmpfile, 'utf-8').split('\n');
-      if (last(r) === '') {
+      if (r.at(-1) === '') {
         r.pop();
       }
       return r;
