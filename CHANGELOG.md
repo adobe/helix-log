@@ -1,3 +1,15 @@
+# [7.0.0](https://github.com/adobe/helix-log/compare/v6.0.6...v7.0.0) (2025-07-14)
+
+
+### Bug Fixes
+
+* remove network based loggers and upgrade to esm ([#388](https://github.com/adobe/helix-log/issues/388)) ([5e295f7](https://github.com/adobe/helix-log/commit/5e295f7b3cde4adae193d99d4446e96cd75888e4))
+
+
+### BREAKING CHANGES
+
+* removed some loggers and upgraded to esm
+
 ## [6.0.6](https://github.com/adobe/helix-log/compare/v6.0.5...v6.0.6) (2025-05-26)
 
 
