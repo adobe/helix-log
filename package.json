@@ -37,7 +37,7 @@
     "junit-report-builder": "5.1.2",
     "mocha": "11.8.0",
     "mocha-junit-reporter": "2.2.1",
-    "mocha-multi-reporters": "1.5.1",
+    "mocha-multi-reporters": "1.5.2",
     "semantic-release": "25.0.9"
   }
 }
